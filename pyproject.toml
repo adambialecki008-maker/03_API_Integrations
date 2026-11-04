@@ -1,8 +1,10 @@
 [project]
-name = "03-api_integrations"
+name = "03_api_integrations"
 version = "0.1.0"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "dotenv>=0.9.9",
+]
 
 [dependency-groups]
 dev = [
