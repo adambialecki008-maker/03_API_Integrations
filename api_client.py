@@ -124,7 +124,33 @@ def fetch_post_page_with_retry(
     return results
 
 
+def fetch_bearer_profile(token: str) -> dict:
+    headers = {"Authorization": f"Bearer {token}"}
+    url = "https://httpbin.org/bearer"
+    response = httpx.get(url=url, headers=headers, timeout=10.0)
+    response.raise_for_status()
+    return response.json()
+
+
+def fetch_access_token(client_id: str, client_secret: str) -> str:
+    url = "https://auth.example.com/oauth/token"
+    data = {"grant_type": "client_credentials"}
+    auth = (client_id, client_secret)
+    response = httpx.post(url=url, data=data, auth=auth, timeout=10.0)
+    response.raise_for_status()
+    results = response.json()
+    token = results["access_token"]
+    return token
+
+
+def fetch_protected_data(client_id: str, client_secret: str) -> dict:
+    url = "https://api.example.com/data"
+    token = fetch_access_token(client_id=client_id, client_secret=client_secret)
+    headers = {"Authorization": f"Bearer {token}"}
+    response = httpx.get(url=url, timeout=10.0, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
 if __name__ == "__main__":
-    posts = fetch_all_posts()
-    print(len(posts))
-    print(type(posts[0]))
+    fetch_access_token("1", "test")

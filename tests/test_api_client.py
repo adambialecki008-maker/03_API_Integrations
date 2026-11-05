@@ -8,6 +8,9 @@ from api_client import (
     fetch_post_page,
     fetch_all_posts,
     fetch_post_page_with_retry,
+    fetch_bearer_profile,
+    fetch_access_token,
+    fetch_protected_data,
 )
 import httpx
 import pytest
@@ -431,3 +434,83 @@ def test_fetch_post_page_with_retry_sucedes_without_retry_after_time():
             assert data == expected_data
             assert mock_page.call_count == 2
             mock_sleep.assert_called_once_with(1)
+
+
+def test_fetch_bearer_profile_success():
+    expected_data = {"authenticated": True, "token": "abc123"}
+    with patch("httpx.get") as mock_get:
+        mock_get.return_value.json.return_value = expected_data
+        data = fetch_bearer_profile("123")
+        assert data == expected_data
+        assert mock_get.call_args_list == [
+            call(
+                url="https://httpbin.org/bearer",
+                headers={"Authorization": "Bearer 123"},
+                timeout=10.0,
+            )
+        ]
+
+
+def test_fetch_bearer_profile_raises_on_401():
+    request = httpx.Request(method="GET", url="test")
+    response = httpx.Response(status_code=401, request=request)
+    error_401 = httpx.HTTPStatusError(
+        message="Error 401", response=response, request=request
+    )
+    with patch("httpx.get") as mock_get:
+        mock_get.return_value.raise_for_status.side_effect = error_401
+        with pytest.raises(httpx.HTTPStatusError) as e:
+            fetch_bearer_profile("123")
+        assert e.value.response.status_code == 401
+
+
+def test_fetch_bearer_profile_raises_on_timeout():
+    with patch("httpx.get") as mock_get:
+        mock_get.side_effect = httpx.ReadTimeout("Timeout Reached")
+        with pytest.raises(httpx.TimeoutException):
+            fetch_bearer_profile("123")
+
+
+def test_fetch_access_token_returns_token():
+    expected_token = "abc123xyz"
+    with patch("httpx.post") as mock_post:
+        mock_post.return_value.json.return_value = {"access_token": expected_token}
+        token = fetch_access_token("1", "10")
+        mock_post.assert_called_once_with(
+            url="https://auth.example.com/oauth/token",
+            data={"grant_type": "client_credentials"},
+            auth=("1", "10"),
+            timeout=10.0,
+        )
+        assert expected_token == token
+        mock_post.return_value.raise_for_status.assert_called_once()
+
+
+def test_fetch_access_token_raises_on_http_404():
+    request = httpx.Request(method="POST", url="test")
+    response = httpx.Response(status_code=404, request=request)
+    error_404 = httpx.HTTPStatusError(
+        message="Error 404", response=response, request=request
+    )
+    with patch("httpx.post") as mock_post:
+        mock_post.return_value.raise_for_status.side_effect = error_404
+
+        with pytest.raises(httpx.HTTPStatusError):
+            fetch_access_token("1", "10")
+
+
+def test_fetch_protected_data_success():
+    expected_data = {"status": "ok"}
+    with patch("api_client.fetch_access_token") as mock_token:
+        with patch("httpx.get") as mock_get:
+            mock_token.return_value = "abc123"
+            mock_get.return_value.json.return_value = expected_data
+            data = fetch_protected_data("1", "10")
+            assert data == expected_data
+            mock_get.assert_called_once_with(
+                url="https://api.example.com/data",
+                timeout=10.0,
+                headers={"Authorization": "Bearer abc123"},
+            )
+            mock_token.assert_called_once_with(client_id="1", client_secret="10")
+            mock_get.return_value.raise_for_status.assert_called_once()
