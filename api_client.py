@@ -1,5 +1,6 @@
 import httpx
 import os
+import time
 
 
 def fetch_users() -> list[dict]:
@@ -84,14 +85,43 @@ def fetch_post_page(page: int, limit: int = 5) -> list[dict]:
 
 def fetch_all_posts(limit: int = 10) -> list[dict]:
     all_posts = []
-    i = 1
+    page = 1
     while True and limit > 0:
-        posts = fetch_post_page(i, limit)
+        posts = fetch_post_page(page, limit)
         all_posts.extend(posts)
         if len(posts) < limit:
             break
-        i += 1
+        page += 1
     return all_posts
+
+
+def fetch_post_page_with_retry(
+    page: int, limit: int = 5, max_attempts: int = 3
+) -> list[dict]:
+    results = []
+    if max_attempts <= 0:
+        raise ValueError("Max_attempts value must be > 0")
+    for attempt in range(max_attempts):
+        try:
+            delay_seconds = 2**attempt
+            results = fetch_post_page(page, limit)
+            break
+        except httpx.TimeoutException as e:
+            if attempt >= max_attempts - 1:
+                raise
+            time.sleep(delay_seconds)
+        except httpx.HTTPStatusError as error:
+            if attempt >= max_attempts - 1:
+                raise
+            status = error.response.status_code
+            if status == 429:
+                delay = error.response.headers.get("Retry-After")
+                if delay is not None and delay.isdecimal():
+                    delay_seconds = int(delay)
+            elif status != 500:
+                raise
+            time.sleep(delay_seconds)
+    return results
 
 
 if __name__ == "__main__":

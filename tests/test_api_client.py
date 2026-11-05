@@ -7,6 +7,7 @@ from api_client import (
     create_post,
     fetch_post_page,
     fetch_all_posts,
+    fetch_post_page_with_retry,
 )
 import httpx
 import pytest
@@ -283,3 +284,150 @@ def test_fetch_all_posts_raises_on_timeout():
         with pytest.raises(httpx.TimeoutException):
             fetch_all_posts(2)
         assert mock_page.call_count == 2
+
+
+def test_fetch_post_page_with_retry_succedes_on_second_attempt():
+    expected_data = [{"id": 1}, {"id": 2}]
+    with patch("api_client.fetch_post_page") as mock_page:
+        with patch("api_client.time.sleep") as mock_sleep:
+            mock_page.side_effect = [
+                httpx.ReadTimeout("TimeoutReached"),
+                [{"id": 1}, {"id": 2}],
+            ]
+            data = fetch_post_page_with_retry(page=1, limit=2)
+            assert mock_page.call_count == 2
+            mock_sleep.assert_called_once_with(1)
+            assert mock_page.call_args_list == [call(1, 2), call(1, 2)]
+            assert data == expected_data
+
+
+def test_fetch_post_page_with_retry_raises_after_three_failed_timeouts():
+    with patch("api_client.fetch_post_page") as mock_page:
+        with patch("api_client.time.sleep") as mock_sleep:
+            mock_page.side_effect = [
+                httpx.ReadTimeout("TimeoutReached"),
+                httpx.ReadTimeout("TimeoutReached"),
+                httpx.ReadTimeout("TimeoutReached"),
+            ]
+            with pytest.raises(httpx.TimeoutException):
+                fetch_post_page_with_retry(page=1, limit=2)
+            assert mock_page.call_count == 3
+            assert mock_page.call_args_list == [call(1, 2), call(1, 2), call(1, 2)]
+            assert mock_sleep.call_count == 2
+            assert mock_sleep.call_args_list == [call(1), call(2)]
+
+
+def test_fetch_post_page_with_retry_succedes_on_first_attempt():
+    expected_data = [{"id": 1}, {"id": 2}]
+    with patch("api_client.fetch_post_page") as mock_page:
+        with patch("api_client.time.sleep") as mock_sleep:
+            mock_page.side_effect = [[{"id": 1}, {"id": 2}]]
+            data = fetch_post_page_with_retry(1, 2)
+
+            assert data == expected_data
+            mock_page.assert_called_once_with(1, 2)
+            mock_sleep.assert_not_called()
+
+
+def test_fetch_post_page_with_retry_raises_on_http_404():
+    request = httpx.Request(method="GET", url="test")
+    response = httpx.Response(status_code=404, request=request)
+    with patch("api_client.fetch_post_page") as mock_page:
+        with patch("api_client.time.sleep") as mock_sleep:
+            mock_page.side_effect = httpx.HTTPStatusError(
+                message="Erorr 404", request=request, response=response
+            )
+            with pytest.raises(httpx.HTTPStatusError):
+                fetch_post_page_with_retry(1, 2)
+            mock_page.assert_called_once_with(1, 2)
+            mock_sleep.assert_not_called()
+
+
+def test_fetch_post_page_retry_raises_on_three_http_500():
+    request = httpx.Request(method="GET", url="test")
+    response = httpx.Response(status_code=500, request=request)
+    error_500 = httpx.HTTPStatusError(
+        message="Error 500", response=response, request=request
+    )
+    with patch("api_client.fetch_post_page") as mock_page:
+        with patch("api_client.time.sleep") as mock_sleep:
+            mock_page.side_effect = [error_500, error_500, error_500]
+            with pytest.raises(httpx.HTTPStatusError):
+                fetch_post_page_with_retry(1, 2)
+            assert mock_page.call_count == 3
+            assert mock_sleep.call_count == 2
+            assert mock_page.call_args_list == [call(1, 2), call(1, 2), call(1, 2)]
+            assert mock_sleep.call_args_list == [call(1), call(2)]
+
+
+def test_fetch_post_page_with_retry_succedes_after_one_http_500():
+    expected_data = [{"id": 1}, {"id": 2}]
+    request = httpx.Request(method="GET", url="test")
+    response = httpx.Response(status_code=500, request=request)
+    error_500 = httpx.HTTPStatusError(
+        message="Error 500", response=response, request=request
+    )
+    with patch("api_client.fetch_post_page") as mock_page:
+        with patch("api_client.time.sleep") as mock_sleep:
+            mock_page.side_effect = [error_500, [{"id": 1}, {"id": 2}]]
+            data = fetch_post_page_with_retry(1, 2)
+            assert data == expected_data
+            assert mock_page.call_count == 2
+            assert mock_page.call_args_list == [call(1, 2), call(1, 2)]
+            mock_sleep.assert_called_once_with(1)
+
+
+def test_fetch_post_page_retry_succedes_after_mixed_errors():
+    expected_data = [{"id": 1}, {"id": 2}]
+    request = httpx.Request(method="GET", url="test")
+    response = httpx.Response(status_code=500, request=request)
+    error_500 = httpx.HTTPStatusError(
+        message="Erorr 500", request=request, response=response
+    )
+    with patch("api_client.fetch_post_page") as mock_page:
+        with patch("api_client.time.sleep") as mock_sleep:
+            mock_page.side_effect = [
+                httpx.ReadTimeout("Timeaout Reached"),
+                error_500,
+                [{"id": 1}, {"id": 2}],
+            ]
+            data = fetch_post_page_with_retry(1, 2)
+            assert data == expected_data
+            assert mock_page.call_count == 3
+            assert mock_page.call_args_list == [call(1, 2), call(1, 2), call(1, 2)]
+            assert mock_sleep.call_count == 2
+            assert mock_sleep.call_args_list == [call(1), call(2)]
+
+
+def test_fetch_post_page_with_retry_reads_retry_after_time_from_server():
+    request = httpx.Request(method="GET", url="test")
+    response = httpx.Response(
+        status_code=429, request=request, headers={"Retry-After": "5"}
+    )
+    error_429 = httpx.HTTPStatusError(
+        message="Error 429", request=request, response=response
+    )
+    expected_data = [{"id": 1}, {"id": 2}]
+    with patch("api_client.fetch_post_page") as mock_page:
+        with patch("api_client.time.sleep") as mock_sleep:
+            mock_page.side_effect = [error_429, expected_data]
+            data = fetch_post_page_with_retry(1, 2)
+            assert data == expected_data
+            assert mock_page.call_count == 2
+            mock_sleep.assert_called_once_with(5)
+
+
+def test_fetch_post_page_with_retry_sucedes_without_retry_after_time():
+    request = httpx.Request(method="GET", url="test")
+    response = httpx.Response(status_code=429, request=request)
+    error_429 = httpx.HTTPStatusError(
+        message="Error 429", request=request, response=response
+    )
+    expected_data = [{"id": 1}, {"id": 2}]
+    with patch("api_client.fetch_post_page") as mock_page:
+        with patch("api_client.time.sleep") as mock_sleep:
+            mock_page.side_effect = [error_429, expected_data]
+            data = fetch_post_page_with_retry(1, 2)
+            assert data == expected_data
+            assert mock_page.call_count == 2
+            mock_sleep.assert_called_once_with(1)
