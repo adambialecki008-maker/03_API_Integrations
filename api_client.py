@@ -135,10 +135,19 @@ def fetch_bearer_profile(token: str) -> dict:
 
 def fetch_protected_data(token_manager: OAuth_token_manager) -> dict:
     url = "https://api.example.com/data"
-    token = token_manager.get_token()
-    headers = {"Authorization": f"Bearer {token}"}
-    response = httpx.get(url=url, timeout=10.0, headers=headers)
-    response.raise_for_status()
+    for attempt in range(2):
+        try:
+            token = token_manager.get_token()
+            headers = {"Authorization": f"Bearer {token}"}
+            response = httpx.get(url=url, timeout=10.0, headers=headers)
+            response.raise_for_status()
+            break
+        except httpx.HTTPStatusError as e:
+            status_code = e.response.status_code
+            if attempt > 0 or status_code != 401:
+                raise
+            token_manager.invalidate_token()
+
     return response.json()
 
 

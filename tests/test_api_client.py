@@ -16,6 +16,42 @@ import pytest
 from oauth_token_manager import OAuth_token_manager
 
 
+@pytest.fixture
+def get_error_401():
+    request = httpx.Request(method="GET", url="test")
+    response = httpx.Response(status_code=401, request=request)
+    return httpx.HTTPStatusError(
+        message="Error 401", request=request, response=response
+    )
+
+
+@pytest.fixture
+def get_error_404():
+    request = httpx.Request(method="GET", url="test")
+    response = httpx.Response(status_code=404, request=request)
+    return httpx.HTTPStatusError(
+        message="Error 404", request=request, response=response
+    )
+
+
+@pytest.fixture
+def post_error_404():
+    request = httpx.Request(method="POST", url="test")
+    response = httpx.Response(status_code=404, request=request)
+    return httpx.HTTPStatusError(
+        message="Error 404", request=request, response=response
+    )
+
+
+@pytest.fixture
+def get_error_500():
+    request = httpx.Request(method="GET", url="test")
+    response = httpx.Response(status_code=500, request=request)
+    return httpx.HTTPStatusError(
+        message="Error 500", request=request, response=response
+    )
+
+
 def test_fetch_users_returns_expected_data():
     example_data = [
         {"id": 1, "name": "Adam", "email": "adam@example.com", "username": "test123"},
@@ -33,13 +69,9 @@ def test_fetch_users_returns_expected_data():
     assert data == expected_data
 
 
-def test_fetch_users_raises_on_http_404():
-    request = httpx.Request("GET", "https://jsonplaceholder.typicode.com/users")
-    response = httpx.Response(status_code=404, request=request)
+def test_fetch_users_raises_on_http_404(get_error_404):
     with patch("httpx.get") as mock_get:
-        mock_get.return_value.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "Error 404", request=request, response=response
-        )
+        mock_get.return_value.raise_for_status.side_effect = get_error_404
         with pytest.raises(httpx.HTTPStatusError):
             fetch_users()
 
@@ -72,13 +104,9 @@ def test_fetch_posts_by_user_returns_expected_data():
     assert data == expected_data
 
 
-def test_fetch_posts_by_user_raises_on_http_404():
-    request = httpx.Request("GET", "https://jsonplaceholder.typicode.com/posts")
-    response = httpx.Response(status_code=404, request=request)
+def test_fetch_posts_by_user_raises_on_http_404(get_error_404):
     with patch("httpx.get") as mock_get:
-        mock_get.return_value.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "Error 404", request=request, response=response
-        )
+        mock_get.return_value.raise_for_status.side_effect = get_error_404
         with pytest.raises(httpx.HTTPStatusError):
             fetch_posts_by_user(2)
 
@@ -119,13 +147,9 @@ def test_fetch_headers_returns_expecte_data():
     assert data == expected_data
 
 
-def test_fetch_headers_raises_on_http_404():
-    request = httpx.Request(method="GET", url="https://httpbin.org/headers")
-    response = httpx.Response(status_code=404, request=request)
+def test_fetch_headers_raises_on_http_404(get_error_404):
     with patch("httpx.get") as mock_get:
-        mock_get.return_value.raise_for_status.side_effect = httpx.HTTPStatusError(
-            message="Error 404", request=request, response=response
-        )
+        mock_get.return_value.raise_for_status.side_effect = get_error_404
         with pytest.raises(httpx.HTTPStatusError):
             fetch_headers("test-key-123")
 
@@ -170,15 +194,9 @@ def test_create_post_returns_exected_response():
     assert data == expected_data
 
 
-def test_create_post_raises_on_http_404():
-    request = httpx.Request(
-        method="POST", url="https://jsonplaceholder.typicode.com/posts"
-    )
-    respone = httpx.Response(status_code=404, request=request)
+def test_create_post_raises_on_http_404(post_error_404):
     with patch("httpx.post") as mock_post:
-        mock_post.return_value.raise_for_status.side_effect = httpx.HTTPStatusError(
-            message="Error 404", response=respone, request=request
-        )
+        mock_post.return_value.raise_for_status.side_effect = post_error_404
         with pytest.raises(httpx.HTTPStatusError):
             create_post(1, "Test", "Hello world")
 
@@ -215,16 +233,9 @@ def test_fetch_post_page_returns_expected_data():
     assert data == expected_data
 
 
-def test_fetch_post_page_raises_on_http_404():
-    url = "https://jsonplaceholder.typicode.com/posts"
-    request = httpx.Request(method="GET", url=url)
-    response = httpx.Response(status_code=404, request=request)
+def test_fetch_post_page_raises_on_http_404(get_error_404):
     with patch("httpx.get") as mock_get:
-        mock_get.return_value.raise_for_status.side_effect = httpx.HTTPStatusError(
-            message="Error 404",
-            request=request,
-            response=response,
-        )
+        mock_get.return_value.raise_for_status.side_effect = get_error_404
         with pytest.raises(httpx.HTTPStatusError):
             fetch_post_page(2, 3)
 
@@ -262,15 +273,11 @@ def test_fetch_all_posts_returns_expected_data():
     ]
 
 
-def test_fetch_all_posts_raises_on_http_error():
-    request = httpx.Request(method="GET", url="test")
-    response = httpx.Response(status_code=500, request=request)
+def test_fetch_all_posts_raises_on_http_error(get_error_500):
     with patch("api_client.fetch_post_page") as mock_page:
         mock_page.side_effect = [
             [{"id": 1}, {"id": 2}],
-            httpx.HTTPStatusError(
-                message="Error 500", request=request, response=response
-            ),
+            get_error_500,
         ]
         with pytest.raises(httpx.HTTPStatusError):
             fetch_all_posts(2)
@@ -332,29 +339,20 @@ def test_fetch_post_page_with_retry_succedes_on_first_attempt():
             mock_sleep.assert_not_called()
 
 
-def test_fetch_post_page_with_retry_raises_on_http_404():
-    request = httpx.Request(method="GET", url="test")
-    response = httpx.Response(status_code=404, request=request)
+def test_fetch_post_page_with_retry_raises_on_http_404(get_error_404):
     with patch("api_client.fetch_post_page") as mock_page:
         with patch("api_client.time.sleep") as mock_sleep:
-            mock_page.side_effect = httpx.HTTPStatusError(
-                message="Erorr 404", request=request, response=response
-            )
+            mock_page.side_effect = get_error_404
             with pytest.raises(httpx.HTTPStatusError):
                 fetch_post_page_with_retry(1, 2)
             mock_page.assert_called_once_with(1, 2)
             mock_sleep.assert_not_called()
 
 
-def test_fetch_post_page_retry_raises_on_three_http_500():
-    request = httpx.Request(method="GET", url="test")
-    response = httpx.Response(status_code=500, request=request)
-    error_500 = httpx.HTTPStatusError(
-        message="Error 500", response=response, request=request
-    )
+def test_fetch_post_page_retry_raises_on_three_http_500(get_error_500):
     with patch("api_client.fetch_post_page") as mock_page:
         with patch("api_client.time.sleep") as mock_sleep:
-            mock_page.side_effect = [error_500, error_500, error_500]
+            mock_page.side_effect = [get_error_500, get_error_500, get_error_500]
             with pytest.raises(httpx.HTTPStatusError):
                 fetch_post_page_with_retry(1, 2)
             assert mock_page.call_count == 3
@@ -363,16 +361,11 @@ def test_fetch_post_page_retry_raises_on_three_http_500():
             assert mock_sleep.call_args_list == [call(1), call(2)]
 
 
-def test_fetch_post_page_with_retry_succedes_after_one_http_500():
+def test_fetch_post_page_with_retry_succedes_after_one_http_500(get_error_500):
     expected_data = [{"id": 1}, {"id": 2}]
-    request = httpx.Request(method="GET", url="test")
-    response = httpx.Response(status_code=500, request=request)
-    error_500 = httpx.HTTPStatusError(
-        message="Error 500", response=response, request=request
-    )
     with patch("api_client.fetch_post_page") as mock_page:
         with patch("api_client.time.sleep") as mock_sleep:
-            mock_page.side_effect = [error_500, [{"id": 1}, {"id": 2}]]
+            mock_page.side_effect = [get_error_500, [{"id": 1}, {"id": 2}]]
             data = fetch_post_page_with_retry(1, 2)
             assert data == expected_data
             assert mock_page.call_count == 2
@@ -380,18 +373,13 @@ def test_fetch_post_page_with_retry_succedes_after_one_http_500():
             mock_sleep.assert_called_once_with(1)
 
 
-def test_fetch_post_page_retry_succedes_after_mixed_errors():
+def test_fetch_post_page_retry_succedes_after_mixed_errors(get_error_500):
     expected_data = [{"id": 1}, {"id": 2}]
-    request = httpx.Request(method="GET", url="test")
-    response = httpx.Response(status_code=500, request=request)
-    error_500 = httpx.HTTPStatusError(
-        message="Erorr 500", request=request, response=response
-    )
     with patch("api_client.fetch_post_page") as mock_page:
         with patch("api_client.time.sleep") as mock_sleep:
             mock_page.side_effect = [
                 httpx.ReadTimeout("Timeaout Reached"),
-                error_500,
+                get_error_500,
                 [{"id": 1}, {"id": 2}],
             ]
             data = fetch_post_page_with_retry(1, 2)
@@ -451,14 +439,9 @@ def test_fetch_bearer_profile_success():
         ]
 
 
-def test_fetch_bearer_profile_raises_on_401():
-    request = httpx.Request(method="GET", url="test")
-    response = httpx.Response(status_code=401, request=request)
-    error_401 = httpx.HTTPStatusError(
-        message="Error 401", response=response, request=request
-    )
+def test_fetch_bearer_profile_raises_on_401(get_error_401):
     with patch("httpx.get") as mock_get:
-        mock_get.return_value.raise_for_status.side_effect = error_401
+        mock_get.return_value.raise_for_status.side_effect = get_error_401
         with pytest.raises(httpx.HTTPStatusError) as e:
             fetch_bearer_profile("123")
         assert e.value.response.status_code == 401
@@ -471,19 +454,87 @@ def test_fetch_bearer_profile_raises_on_timeout():
             fetch_bearer_profile("123")
 
 
-def test_fetch_protected_data_success():
-    token_manager = OAuth_token_manager("1", "10")
+def test_fetch_protected_data_succedes_on_first_attempt():
+    token_manager = OAuth_token_manager("1", "2")
     expected_data = {"status": "ok"}
+    expected_token = "abc123"
     with patch.object(token_manager, "get_token") as mock_token:
         with patch("httpx.get") as mock_get:
-            mock_token.return_value = "abc123"
+            mock_token.return_value = expected_token
             mock_get.return_value.json.return_value = expected_data
             data = fetch_protected_data(token_manager)
             assert data == expected_data
             mock_get.assert_called_once_with(
                 url="https://api.example.com/data",
                 timeout=10.0,
-                headers={"Authorization": "Bearer abc123"},
+                headers={"Authorization": f"Bearer {expected_token}"},
             )
             mock_token.assert_called_once_with()
             mock_get.return_value.raise_for_status.assert_called_once()
+
+
+def test_fetch_protected_data_refreshes_token_after_401(get_error_401):
+    token_manager = OAuth_token_manager("1", "2")
+    raise_for_status_results = [get_error_401, None]
+    response_json = {"status": "ok"}
+    expected_tokens = ["token_1", "token_2"]
+    calls = [
+        call(
+            url="https://api.example.com/data",
+            timeout=10.0,
+            headers={"Authorization": f"Bearer {expected_tokens[0]}"},
+        ),
+        call(
+            url="https://api.example.com/data",
+            timeout=10.0,
+            headers={"Authorization": f"Bearer {expected_tokens[1]}"},
+        ),
+    ]
+    with patch.object(token_manager, "get_token") as mock_token:
+        with patch.object(token_manager, "invalidate_token") as mock_invalidate:
+            with patch("httpx.get") as mock_get:
+                mock_token.side_effect = expected_tokens
+                mock_get.return_value.raise_for_status.side_effect = (
+                    raise_for_status_results
+                )
+                mock_get.return_value.json.return_value = response_json
+                data = fetch_protected_data(token_manager)
+                assert mock_get.call_args_list == calls
+                assert data == response_json
+                assert mock_token.call_count == 2
+                mock_invalidate.assert_called_once_with()
+
+
+def test_fetch_protected_data_raises_after_second_http_401(get_error_401):
+    token_manager = OAuth_token_manager("1", "2")
+    raise_for_status_results = [get_error_401, get_error_401]
+    expected_tokens = ["token_1", "token_2"]
+    response_json = None
+    calls = [
+        call(
+            url="https://api.example.com/data",
+            timeout=10.0,
+            headers={"Authorization": f"Bearer {expected_tokens[0]}"},
+        ),
+        call(
+            url="https://api.example.com/data",
+            timeout=10.0,
+            headers={"Authorization": f"Bearer {expected_tokens[1]}"},
+        ),
+    ]
+    with patch.object(token_manager, "get_token") as mock_token:
+        with patch("httpx.get") as mock_get:
+            with patch.object(token_manager, "invalidate_token") as mock_invalidate:
+                mock_token.side_effect = expected_tokens
+                mock_get.return_value.json.return_value = response_json
+                mock_get.return_value.raise_for_status.side_effect = (
+                    raise_for_status_results
+                )
+                with pytest.raises(httpx.HTTPStatusError) as exc_info:
+                    fetch_protected_data(token_manager)
+
+                assert exc_info.value.response.status_code == 401
+                assert mock_get.call_args_list == calls
+                assert mock_token.call_count == 2
+                mock_invalidate.assert_called_once_with()
+                assert mock_get.return_value.raise_for_status.call_count == 2

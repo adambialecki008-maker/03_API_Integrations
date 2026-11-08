@@ -27,3 +27,7 @@ class OAuth_token_manager:
         self.expires_in = token_data["expires_in"]
         self.expires_at = time.monotonic() + self.expires_in - 30
         return self.cached_token
+
+    def invalidate_token(self) -> None:
+        self.cached_token = None
+        self.expires_at = 0

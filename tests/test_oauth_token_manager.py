@@ -131,3 +131,11 @@ def test_get_token_refreshes_at_expiration_boundary(manager):
             assert mock_data.call_count == 2
             assert manager.cached_token == data
             assert manager.expires_at == 8140
+
+
+def test_invalidate_token_clears_cache(manager):
+    manager.cached_token = "Test123"
+    manager.expires_at = 500
+    manager.invalidate_token()
+    assert manager.cached_token is None
+    assert manager.expires_at == 0
