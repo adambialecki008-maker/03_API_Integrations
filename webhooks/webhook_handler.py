@@ -1,14 +1,12 @@
-import httpx
+from webhooks.models import WebhookPayload
 
 
-def process_webhook(payload: dict) -> dict:
-    validate_payload(payload)
-    data = payload["data"]
-
+def process_webhook(payload: WebhookPayload) -> dict:
+    webhook = WebhookPayload.model_validate(payload)
     return {
-        "event_id": payload["event_id"],
-        "machine": data["machine"],
-        "alarm_code": data["alarm_code"],
+        "event_id": webhook.event_id,
+        "machine": webhook.data.machine,
+        "alarm_code": webhook.data.alarm_code,
     }
 
 
