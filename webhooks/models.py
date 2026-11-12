@@ -17,4 +17,5 @@ class AlarmData(BaseModel):
 class WebhookPayload(BaseModel):
     event_id: str = Field(min_length=1, pattern=r"\S")
     event: Literal["alarm.created"]
+    timestamp: int = Field(strict=True)
     data: AlarmData

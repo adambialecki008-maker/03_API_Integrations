@@ -11,3 +11,7 @@ def verify_webhook_signature(raw_body: bytes, signature: str, secret: str) -> bo
 
 def calculate_signature(raw_body: bytes, secret: str) -> str:
     return hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+
+
+def is_timestamp_valid(timestamp: int, current_time: int, tolerance: int = 300) -> bool:
+    return abs(current_time - timestamp) <= tolerance

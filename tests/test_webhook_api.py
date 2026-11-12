@@ -2,8 +2,8 @@ from fastapi.testclient import TestClient
 from webhooks.webhook_api import app
 from webhooks.webhook_api import secret
 from webhooks.security import calculate_signature
-import json
-from pydantic import ValidationError
+import json, time
+from uuid import uuid4
 
 client = TestClient(app)
 
@@ -67,3 +67,44 @@ def test_receive_webhook_raises_http_401_on_wrong_signature(valid_payload):
     response = client.post(url="/webhook", content=raw_body, headers=headers)
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid webhook signature"}
+
+
+def test_receive_webhook_raises_http_401_on_expired_timestamp(valid_payload):
+    payload = valid_payload
+    payload["timestamp"] = int(time.time()) - 600
+
+    raw_body = json.dumps(payload).encode("utf-8")
+    signature = calculate_signature(raw_body, secret)
+    headers = headers = {
+        "Content-Type": "application/json",
+        "X-Webhook-Signature": signature,
+    }
+    response = client.post(url="/webhook", headers=headers, content=raw_body)
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Expired webhook timestamp"}
+
+
+def test_receive_webhook_raises_http_409_on_duplicate_registry(valid_payload):
+    payload = valid_payload
+    payload["event_id"] = f"evt_{uuid4()}"
+    raw_body = json.dumps(valid_payload).encode("utf-8")
+    signature = calculate_signature(raw_body, secret)
+    headers = {
+        "Content-Type": "application/json",
+        "X-Webhook-Signature": signature,
+    }
+    response_old = client.post(
+        "/webhook",
+        content=raw_body,
+        headers=headers,
+    )
+    response_new = client.post(
+        "/webhook",
+        content=raw_body,
+        headers=headers,
+    )
+
+    assert response_old.status_code == 200
+    assert response_new.status_code == 409
+    assert response_new.json() == {"detail": "Duplicate webhook event"}

@@ -35,3 +35,11 @@ def test_webhook_rejects_invalid_machine(valid_payload, invalid_machine):
     payload["data"]["machine"] = invalid_machine
     with pytest.raises(ValidationError):
         webhook = WebhookPayload.model_validate(payload)
+
+
+@pytest.mark.parametrize("timestamp", ["1000", 1000.5, None, True])
+def test_webhook_rejects_invalid_timestamp_format(valid_payload, timestamp):
+    payload = valid_payload
+    payload["timestamp"] = timestamp
+    with pytest.raises(ValidationError):
+        webhook = WebhookPayload.model_validate(payload)
