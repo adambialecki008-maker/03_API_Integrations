@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
-from src.api_integrations.webhooks.webhook_api import app
-from src.api_integrations.webhooks.webhook_api import secret
-from src.api_integrations.webhooks.security import calculate_signature
+from api_integrations.webhooks.webhook_api import app
+from api_integrations.webhooks.webhook_api import secret
+from api_integrations.webhooks.security import calculate_signature
 import json, time
 from uuid import uuid4
 
@@ -85,7 +85,13 @@ def test_receive_webhook_raises_http_401_on_expired_timestamp(valid_payload):
     assert response.json() == {"detail": "Expired webhook timestamp"}
 
 
-def test_receive_webhook_raises_http_409_on_duplicate_registry(valid_payload):
+def test_receive_webhook_raises_http_409_on_duplicate_registry(
+    valid_payload, tmp_path, monkeypatch
+):
+    test_path = tmp_path / "test.db"
+    monkeypatch.setattr(
+        "api_integrations.webhooks.webhook_api.registry.path", test_path
+    )
     payload = valid_payload
     payload["event_id"] = f"evt_{uuid4()}"
     raw_body = json.dumps(valid_payload).encode("utf-8")

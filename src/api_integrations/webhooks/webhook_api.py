@@ -1,14 +1,14 @@
 from fastapi import FastAPI, Header, Request, HTTPException
-from src.api_integrations.webhooks.webhook_handler import process_webhook
-from src.api_integrations.webhooks.models import WebhookPayload
-from src.api_integrations.webhooks.security import (
+from api_integrations.webhooks.webhook_handler import process_webhook
+from api_integrations.models import WebhookPayload
+from api_integrations.webhooks.security import (
     verify_webhook_signature,
     is_timestamp_valid,
 )
 import os, time
 from dotenv import load_dotenv
 from pydantic import ValidationError
-from src.api_integrations.webhooks.duplication import EventRegistry
+from api_integrations.events_registry import EventRegistry
 
 app = FastAPI()
 load_dotenv()
@@ -34,7 +34,7 @@ async def receive_webhook(
     current_time = int(time.time())
     if not is_timestamp_valid(payload.timestamp, current_time):
         raise HTTPException(status_code=401, detail="Expired webhook timestamp")
-    if not registry.register(payload.event_id):
+    if not registry.register(payload):
         raise HTTPException(
             status_code=409,
             detail="Duplicate webhook event",

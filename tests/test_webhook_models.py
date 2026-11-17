@@ -1,4 +1,4 @@
-from src.api_integrations.webhooks.models import AlarmData, WebhookPayload
+from api_integrations.models import WebhookPayload
 import pytest
 from pydantic import ValidationError
 

@@ -19,3 +19,11 @@ class WebhookPayload(BaseModel):
     event: Literal["alarm.created"]
     timestamp: int = Field(strict=True)
     data: AlarmData
+
+
+class RegisteredEvent(BaseModel):
+    event_id: str = Field(min_length=1, pattern=r"\S")
+    event: Literal["alarm.created"]
+    data: AlarmData
+    timestamp: str
+    received_at: str
