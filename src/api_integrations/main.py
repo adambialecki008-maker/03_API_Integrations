@@ -1,4 +1,4 @@
-from webhooks.security import calculate_signature
+from api_integrations.webhooks.security import calculate_signature
 import secrets
 
 raw_body = b"The quick brown fox jumps over the lazy dog"
