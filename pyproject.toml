@@ -7,12 +7,13 @@ dependencies = [
     "fastapi[standard]>=0.162.2",
     "httpx>=0.28.1",
     "pydantic>=2",
+    "tzdata>=2026.6",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=9.2.0",
-    "tzdata>=2026.6",
+    
 ]
 [tool.setuptool.packages.find]
 where = ["src"]

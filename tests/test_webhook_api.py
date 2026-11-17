@@ -2,10 +2,11 @@ from fastapi.testclient import TestClient
 from api_integrations.webhooks.webhook_api import app
 from api_integrations.webhooks.webhook_api import secret
 from api_integrations.webhooks.security import calculate_signature
-import json, time
+import json, time, threading
 from uuid import uuid4
 from api_integrations.events_repository import EventsRepository, DuplicateEventError
 from api_integrations.events_registry import EventRegistry
+from concurrent.futures import ThreadPoolExecutor
 
 client = TestClient(app)
 
@@ -199,7 +200,6 @@ def test_receive_webhook_persists_history_across_registry_reinitialization(
         "X-Webhook-Signature": signature,
     }
 
-    # 1. Pierwsze żądanie zapisuje zdarzenie do pliku SQLite
     first_response = client.post(
         "/webhook",
         content=raw_body,
@@ -211,7 +211,6 @@ def test_receive_webhook_persists_history_across_registry_reinitialization(
     new_registry.path = test_path
     monkeypatch.setattr("api_integrations.webhooks.webhook_api.registry", new_registry)
 
-    # 3. Drugie żądanie po re-inicjalizacji musi dostać 409 z bazy
     second_response = client.post(
         "/webhook",
         content=raw_body,
@@ -219,3 +218,43 @@ def test_receive_webhook_persists_history_across_registry_reinitialization(
     )
     assert second_response.status_code == 409
     assert second_response.json() == {"detail": "Duplicate webhook event"}
+
+
+def test_receive_webhook_concurrent_requests_real_sqlite_returns_200_and_409(
+    valid_payload, tmp_path, monkeypatch
+):
+    test_path = tmp_path / "test_concurrent.db"
+    monkeypatch.setattr(
+        "api_integrations.webhooks.webhook_api.registry.path", test_path
+    )
+
+    payload = valid_payload.copy()
+    payload["event_id"] = f"evt_{uuid4()}"
+    raw_body = json.dumps(payload).encode("utf-8")
+    signature = calculate_signature(raw_body, secret)
+    headers = {
+        "Content-Type": "application/json",
+        "X-Webhook-Signature": signature,
+    }
+
+    barrier = threading.Barrier(2)
+
+    def send_concurrent_request():
+        barrier.wait()
+        return client.post(
+            "/webhook",
+            content=raw_body,
+            headers=headers,
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future_1 = executor.submit(send_concurrent_request)
+        future_2 = executor.submit(send_concurrent_request)
+        responses = [future_1.result(), future_2.result()]
+
+    status_codes = sorted([res.status_code for res in responses])
+
+    assert status_codes == [200, 409]
+
+    duplicate_response = next(res for res in responses if res.status_code == 409)
+    assert duplicate_response.json() == {"detail": "Duplicate webhook event"}
