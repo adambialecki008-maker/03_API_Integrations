@@ -1,6 +1,11 @@
-from api_integrations.events_repository import EventsRepository, format_timestamp
+from api_integrations.events_repository import (
+    EventsRepository,
+    format_timestamp,
+    DuplicateEventError,
+)
 import pytest, time
 from api_integrations.models import WebhookPayload, RegisteredEvent, AlarmData
+from unittest.mock import patch
 
 
 @pytest.fixture
@@ -15,7 +20,7 @@ def valid_events():
     payload_1 = {
         "event_id": "evt_001",
         "event": "alarm.created",
-        "timestamp": int(time.time()),
+        "timestamp": 1794932368,
         "data": {
             "machine": "PLC_01",
             "alarm_code": 204,
@@ -24,7 +29,7 @@ def valid_events():
     payload_2 = {
         "event_id": "evt_002",
         "event": "alarm.created",
-        "timestamp": int(time.time()),
+        "timestamp": 1794932368,
         "data": {
             "machine": "PLC_03",
             "alarm_code": 208,
@@ -42,9 +47,9 @@ def expected_event():
     return RegisteredEvent(
         event_id="evt_001",
         event="alarm.created",
-        timestamp=format_timestamp(int(time.time())),
+        timestamp=format_timestamp(1794932368),
         data=AlarmData(machine="PLC_01", alarm_code=204),
-        received_at=format_timestamp(int(time.time())),
+        received_at=format_timestamp(1794932368),
     )
 
 
@@ -67,11 +72,22 @@ def test_creates_table_crates_expected_columns(repository):
 
 def test_save_event_adds_expected_event(repository, valid_events, expected_event):
     event_1, _ = valid_events
-    repository.save_event(event_1)
-    results = repository.get_event_by_event_id(event_1.event_id)
-    assert results == expected_event
+    with patch("time.time") as mock_time:
+        mock_time.return_value = 1794932368
+        repository.save_event(event_1)
+        results = repository.get_event_by_event_id(event_1.event_id)
+        assert results == expected_event
 
 
 def test_get_event_by_id_returns_none_if_no_event(repository):
     results = repository.get_event_by_event_id("evt_05")
     assert results is None
+
+
+def test_save_event_raises_duplication_error_if_event_already_exists(
+    repository, valid_events
+):
+    event_1, event_2 = valid_events
+    repository.save_event(event_1)
+    with pytest.raises(DuplicateEventError):
+        repository.save_event(event_1)

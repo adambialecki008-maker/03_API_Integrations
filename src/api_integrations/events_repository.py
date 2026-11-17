@@ -2,11 +2,16 @@ import sqlite3, time
 from pathlib import Path
 from api_integrations.models import RegisteredEvent, AlarmData, WebhookPayload
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 
 def format_timestamp(timestamp: int) -> str:
-    dt = datetime.fromtimestamp(timestamp)
+    dt = datetime.fromtimestamp(timestamp, tz=ZoneInfo("Europe/Warsaw"))
     return dt.strftime("%d-%m-%Y %H:%M:%S")
+
+
+class DuplicateEventError(Exception):
+    pass
 
 
 class EventsRepository:
@@ -34,6 +39,7 @@ class EventsRepository:
             if connection:
                 connection.rollback()
             print("Error during creating events table")
+            raise
         finally:
             if connection:
                 connection.close()
@@ -59,6 +65,10 @@ class EventsRepository:
         except sqlite3.Error as e:
             if connection:
                 connection.rollback()
+            if "UNIQUE constraint failed" in str(e):
+                raise DuplicateEventError(
+                    f"Event {payload.event_id} already exists"
+                ) from e
             print("Error during saving event to database")
             raise
         finally:

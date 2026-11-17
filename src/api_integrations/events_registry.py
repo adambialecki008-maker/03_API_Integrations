@@ -1,4 +1,4 @@
-from api_integrations.events_repository import EventsRepository
+from api_integrations.events_repository import EventsRepository, DuplicateEventError
 from api_integrations.models import WebhookPayload
 
 
@@ -8,8 +8,8 @@ class EventRegistry:
 
     def register(self, payload: WebhookPayload) -> bool:
         self.repository = EventsRepository(self.path)
-        event = self.repository.get_event_by_event_id(payload.event_id)
-        if event is None:
+        try:
             self.repository.save_event(payload)
             return True
-        return False
+        except DuplicateEventError as e:
+            return False

@@ -12,6 +12,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.2.0",
+    "tzdata>=2026.6",
 ]
 [tool.setuptool.packages.find]
 where = ["src"]

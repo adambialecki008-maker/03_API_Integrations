@@ -4,11 +4,17 @@ from api_integrations.webhooks.webhook_api import secret
 from api_integrations.webhooks.security import calculate_signature
 import json, time
 from uuid import uuid4
+from api_integrations.events_repository import EventsRepository, DuplicateEventError
+from api_integrations.events_registry import EventRegistry
 
 client = TestClient(app)
 
 
-def test_webhook_returns_200(valid_payload):
+def test_webhook_returns_200(valid_payload, tmp_path, monkeypatch):
+    test_path = tmp_path / "test.db"
+    monkeypatch.setattr(
+        "api_integrations.webhooks.webhook_api.registry.path", test_path
+    )
     payload = valid_payload
     raw_body = json.dumps(payload).encode("utf-8")
     signature = calculate_signature(raw_body, secret)
@@ -23,7 +29,11 @@ def test_webhook_returns_200(valid_payload):
     assert response.json() == expected_json
 
 
-def test_webhook_returns_422_on_wrong_event(valid_payload):
+def test_webhook_returns_422_on_wrong_event(valid_payload, tmp_path, monkeypatch):
+    test_path = tmp_path / "test.db"
+    monkeypatch.setattr(
+        "api_integrations.webhooks.webhook_api.registry.path", test_path
+    )
     payload = valid_payload
     payload["event"] = "alarm.deleted"
     raw_body = json.dumps(payload).encode("utf-8")
@@ -34,7 +44,11 @@ def test_webhook_returns_422_on_wrong_event(valid_payload):
     assert response.json() == {"detail": "Invalid webhook payload"}
 
 
-def test_webhook_returns_422_on_invalid_body():
+def test_webhook_returns_422_on_invalid_body(tmp_path, monkeypatch):
+    test_path = tmp_path / "test.db"
+    monkeypatch.setattr(
+        "api_integrations.webhooks.webhook_api.registry.path", test_path
+    )
     raw_body = json.dumps([1, 2, 3]).encode("utf-8")
     signature = calculate_signature(raw_body, secret)
     headers = {
@@ -50,7 +64,13 @@ def test_webhook_returns_422_on_invalid_body():
     assert response.json() == {"detail": "Invalid webhook payload"}
 
 
-def test_receive_webhook_raises_http_401_on_missing_header(valid_payload):
+def test_receive_webhook_raises_http_401_on_missing_header(
+    valid_payload, tmp_path, monkeypatch
+):
+    test_path = tmp_path / "test.db"
+    monkeypatch.setattr(
+        "api_integrations.webhooks.webhook_api.registry.path", test_path
+    )
     payload = valid_payload
     raw_body = json.dumps(payload).encode("utf-8")
     headers = {"Content-Type": "application/json"}
@@ -59,7 +79,13 @@ def test_receive_webhook_raises_http_401_on_missing_header(valid_payload):
     assert response.json() == {"detail": "Invalid webhook signature"}
 
 
-def test_receive_webhook_raises_http_401_on_wrong_signature(valid_payload):
+def test_receive_webhook_raises_http_401_on_wrong_signature(
+    valid_payload, tmp_path, monkeypatch
+):
+    test_path = tmp_path / "test.db"
+    monkeypatch.setattr(
+        "api_integrations.webhooks.webhook_api.registry.path", test_path
+    )
     payload = valid_payload
     raw_body = json.dumps(payload).encode("utf-8")
     signature = "test_signature_123"
@@ -69,7 +95,13 @@ def test_receive_webhook_raises_http_401_on_wrong_signature(valid_payload):
     assert response.json() == {"detail": "Invalid webhook signature"}
 
 
-def test_receive_webhook_raises_http_401_on_expired_timestamp(valid_payload):
+def test_receive_webhook_raises_http_401_on_expired_timestamp(
+    valid_payload, tmp_path, monkeypatch
+):
+    test_path = tmp_path / "test.db"
+    monkeypatch.setattr(
+        "api_integrations.webhooks.webhook_api.registry.path", test_path
+    )
     payload = valid_payload
     payload["timestamp"] = int(time.time()) - 600
 
@@ -114,3 +146,76 @@ def test_receive_webhook_raises_http_409_on_duplicate_registry(
     assert response_old.status_code == 200
     assert response_new.status_code == 409
     assert response_new.json() == {"detail": "Duplicate webhook event"}
+
+
+def test_receive_webhook_raises_http_409_on_sqlite3_duplication_error(
+    valid_payload, tmp_path, monkeypatch
+):
+    test_path = tmp_path / "test.db"
+    monkeypatch.setattr(
+        "api_integrations.webhooks.webhook_api.registry.path", test_path
+    )
+    monkeypatch.setattr(
+        EventsRepository,
+        "get_event_by_event_id",
+        lambda self, event_id: None,
+    )
+    monkeypatch.setattr(
+        EventsRepository,
+        "save_event",
+        lambda self, payload: (_ for _ in ()).throw(DuplicateEventError()),
+    )
+    payload = valid_payload
+    payload["event_id"] = f"evt_{uuid4()}"
+    raw_body = json.dumps(valid_payload).encode("utf-8")
+    signature = calculate_signature(raw_body, secret)
+    headers = {
+        "Content-Type": "application/json",
+        "X-Webhook-Signature": signature,
+    }
+    response = client.post(
+        "/webhook",
+        content=raw_body,
+        headers=headers,
+    )
+    assert response.status_code == 409
+    assert response.json() == {"detail": "Duplicate webhook event"}
+
+
+def test_receive_webhook_persists_history_across_registry_reinitialization(
+    valid_payload, tmp_path, monkeypatch
+):
+    test_path = tmp_path / "test.db"
+    monkeypatch.setattr(
+        "api_integrations.webhooks.webhook_api.registry.path", test_path
+    )
+
+    payload = valid_payload.copy()
+    payload["event_id"] = f"evt_{uuid4()}"
+    raw_body = json.dumps(payload).encode("utf-8")
+    signature = calculate_signature(raw_body, secret)
+    headers = {
+        "Content-Type": "application/json",
+        "X-Webhook-Signature": signature,
+    }
+
+    # 1. Pierwsze żądanie zapisuje zdarzenie do pliku SQLite
+    first_response = client.post(
+        "/webhook",
+        content=raw_body,
+        headers=headers,
+    )
+    assert first_response.status_code == 200
+
+    new_registry = EventRegistry()
+    new_registry.path = test_path
+    monkeypatch.setattr("api_integrations.webhooks.webhook_api.registry", new_registry)
+
+    # 3. Drugie żądanie po re-inicjalizacji musi dostać 409 z bazy
+    second_response = client.post(
+        "/webhook",
+        content=raw_body,
+        headers=headers,
+    )
+    assert second_response.status_code == 409
+    assert second_response.json() == {"detail": "Duplicate webhook event"}

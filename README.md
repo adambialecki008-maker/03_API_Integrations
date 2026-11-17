@@ -63,18 +63,13 @@ Expected responses:
 
 **Replay attack protection is currently educational, not production-ready.**
 
-Duplicate event IDs are stored in an in-memory Python `set`.
+Duplicate event IDs are stored in event.db.
 
 This means:
 
-- Stored IDs disappear after an application restart.
-- Multiple application processes do not share the registry.
-- Concurrent requests may require atomic duplicate detection.
-- Stored identifiers are not automatically removed.
+- Stored IDs persists after an application restart.
+- Multiple application processes share the registry.
 
-**Planned improvement:** Implement persistent event deduplication using SQLite, a unique constraint on `event_id`, and database transactions.
-
-This will be covered separately in the SQL / Database Integration module.
 
 ## Purpose
 

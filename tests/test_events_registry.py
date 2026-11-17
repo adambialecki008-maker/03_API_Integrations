@@ -1,6 +1,7 @@
 from api_integrations.events_registry import EventRegistry
 import time, pytest
 from api_integrations.models import RegisteredEvent, AlarmData, WebhookPayload
+from unittest.mock import patch
 
 
 @pytest.fixture
