@@ -1,4 +1,4 @@
-from webhooks.models import WebhookPayload
+from src.api_integrations.webhooks.models import WebhookPayload
 
 
 def process_webhook(payload: WebhookPayload) -> dict:

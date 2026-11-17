@@ -1,5 +1,5 @@
 from unittest.mock import patch, call
-from api_client import (
+from api_integrations.api_client import (
     fetch_users,
     fetch_posts_by_user,
     fetch_headers,
@@ -13,7 +13,7 @@ from api_client import (
 )
 import httpx
 import pytest
-from oauth_token_manager import OAuth_token_manager
+from api_integrations.oauth_token_manager import OAuth_token_manager
 
 
 @pytest.fixture
@@ -250,7 +250,7 @@ def test_fetch_post_page_raises_on_timeout():
 
 def test_fetch_all_posts_returns_expected_data():
 
-    with patch("api_client.fetch_post_page") as mock_page:
+    with patch("api_integrations.api_client.fetch_post_page") as mock_page:
         mock_page.side_effect = [
             [{"id": 1}, {"id": 2}],
             [{"id": 3}, {"id": 4}],
@@ -274,7 +274,7 @@ def test_fetch_all_posts_returns_expected_data():
 
 
 def test_fetch_all_posts_raises_on_http_error(get_error_500):
-    with patch("api_client.fetch_post_page") as mock_page:
+    with patch("api_integrations.api_client.fetch_post_page") as mock_page:
         mock_page.side_effect = [
             [{"id": 1}, {"id": 2}],
             get_error_500,
@@ -285,7 +285,7 @@ def test_fetch_all_posts_raises_on_http_error(get_error_500):
 
 
 def test_fetch_all_posts_raises_on_timeout():
-    with patch("api_client.fetch_post_page") as mock_page:
+    with patch("api_integrations.api_client.fetch_post_page") as mock_page:
         mock_page.side_effect = [
             [{"id": 1}, {"id": 2}],
             httpx.ReadTimeout("Timeout Reached"),
@@ -298,8 +298,8 @@ def test_fetch_all_posts_raises_on_timeout():
 
 def test_fetch_post_page_with_retry_succedes_on_second_attempt():
     expected_data = [{"id": 1}, {"id": 2}]
-    with patch("api_client.fetch_post_page") as mock_page:
-        with patch("api_client.time.sleep") as mock_sleep:
+    with patch("api_integrations.api_client.fetch_post_page") as mock_page:
+        with patch("api_integrations.api_client.time.sleep") as mock_sleep:
             mock_page.side_effect = [
                 httpx.ReadTimeout("TimeoutReached"),
                 [{"id": 1}, {"id": 2}],
@@ -312,8 +312,8 @@ def test_fetch_post_page_with_retry_succedes_on_second_attempt():
 
 
 def test_fetch_post_page_with_retry_raises_after_three_failed_timeouts():
-    with patch("api_client.fetch_post_page") as mock_page:
-        with patch("api_client.time.sleep") as mock_sleep:
+    with patch("api_integrations.api_client.fetch_post_page") as mock_page:
+        with patch("api_integrations.api_client.time.sleep") as mock_sleep:
             mock_page.side_effect = [
                 httpx.ReadTimeout("TimeoutReached"),
                 httpx.ReadTimeout("TimeoutReached"),
@@ -329,8 +329,8 @@ def test_fetch_post_page_with_retry_raises_after_three_failed_timeouts():
 
 def test_fetch_post_page_with_retry_succedes_on_first_attempt():
     expected_data = [{"id": 1}, {"id": 2}]
-    with patch("api_client.fetch_post_page") as mock_page:
-        with patch("api_client.time.sleep") as mock_sleep:
+    with patch("api_integrations.api_client.fetch_post_page") as mock_page:
+        with patch("api_integrations.api_client.time.sleep") as mock_sleep:
             mock_page.side_effect = [[{"id": 1}, {"id": 2}]]
             data = fetch_post_page_with_retry(1, 2)
 
@@ -340,8 +340,8 @@ def test_fetch_post_page_with_retry_succedes_on_first_attempt():
 
 
 def test_fetch_post_page_with_retry_raises_on_http_404(get_error_404):
-    with patch("api_client.fetch_post_page") as mock_page:
-        with patch("api_client.time.sleep") as mock_sleep:
+    with patch("api_integrations.api_client.fetch_post_page") as mock_page:
+        with patch("api_integrations.api_client.time.sleep") as mock_sleep:
             mock_page.side_effect = get_error_404
             with pytest.raises(httpx.HTTPStatusError):
                 fetch_post_page_with_retry(1, 2)
@@ -350,8 +350,8 @@ def test_fetch_post_page_with_retry_raises_on_http_404(get_error_404):
 
 
 def test_fetch_post_page_retry_raises_on_three_http_500(get_error_500):
-    with patch("api_client.fetch_post_page") as mock_page:
-        with patch("api_client.time.sleep") as mock_sleep:
+    with patch("api_integrations.api_client.fetch_post_page") as mock_page:
+        with patch("api_integrations.api_client.time.sleep") as mock_sleep:
             mock_page.side_effect = [get_error_500, get_error_500, get_error_500]
             with pytest.raises(httpx.HTTPStatusError):
                 fetch_post_page_with_retry(1, 2)
@@ -363,8 +363,8 @@ def test_fetch_post_page_retry_raises_on_three_http_500(get_error_500):
 
 def test_fetch_post_page_with_retry_succedes_after_one_http_500(get_error_500):
     expected_data = [{"id": 1}, {"id": 2}]
-    with patch("api_client.fetch_post_page") as mock_page:
-        with patch("api_client.time.sleep") as mock_sleep:
+    with patch("api_integrations.api_client.fetch_post_page") as mock_page:
+        with patch("api_integrations.api_client.time.sleep") as mock_sleep:
             mock_page.side_effect = [get_error_500, [{"id": 1}, {"id": 2}]]
             data = fetch_post_page_with_retry(1, 2)
             assert data == expected_data
@@ -375,8 +375,8 @@ def test_fetch_post_page_with_retry_succedes_after_one_http_500(get_error_500):
 
 def test_fetch_post_page_retry_succedes_after_mixed_errors(get_error_500):
     expected_data = [{"id": 1}, {"id": 2}]
-    with patch("api_client.fetch_post_page") as mock_page:
-        with patch("api_client.time.sleep") as mock_sleep:
+    with patch("api_integrations.api_client.fetch_post_page") as mock_page:
+        with patch("api_integrations.api_client.time.sleep") as mock_sleep:
             mock_page.side_effect = [
                 httpx.ReadTimeout("Timeaout Reached"),
                 get_error_500,
@@ -399,8 +399,8 @@ def test_fetch_post_page_with_retry_reads_retry_after_time_from_server():
         message="Error 429", request=request, response=response
     )
     expected_data = [{"id": 1}, {"id": 2}]
-    with patch("api_client.fetch_post_page") as mock_page:
-        with patch("api_client.time.sleep") as mock_sleep:
+    with patch("api_integrations.api_client.fetch_post_page") as mock_page:
+        with patch("api_integrations.api_client.time.sleep") as mock_sleep:
             mock_page.side_effect = [error_429, expected_data]
             data = fetch_post_page_with_retry(1, 2)
             assert data == expected_data
@@ -415,8 +415,8 @@ def test_fetch_post_page_with_retry_sucedes_without_retry_after_time():
         message="Error 429", request=request, response=response
     )
     expected_data = [{"id": 1}, {"id": 2}]
-    with patch("api_client.fetch_post_page") as mock_page:
-        with patch("api_client.time.sleep") as mock_sleep:
+    with patch("api_integrations.api_client.fetch_post_page") as mock_page:
+        with patch("api_integrations.api_client.time.sleep") as mock_sleep:
             mock_page.side_effect = [error_429, expected_data]
             data = fetch_post_page_with_retry(1, 2)
             assert data == expected_data

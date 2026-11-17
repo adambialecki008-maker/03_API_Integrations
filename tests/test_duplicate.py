@@ -1,4 +1,4 @@
-from webhooks.duplication import EventRegistry
+from src.api_integrations.webhooks.duplication import EventRegistry
 
 
 def test_event_registry():

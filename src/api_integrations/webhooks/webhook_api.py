@@ -1,11 +1,14 @@
 from fastapi import FastAPI, Header, Request, HTTPException
-from webhooks.webhook_handler import process_webhook
-from webhooks.models import WebhookPayload
-from webhooks.security import verify_webhook_signature, is_timestamp_valid
+from src.api_integrations.webhooks.webhook_handler import process_webhook
+from src.api_integrations.webhooks.models import WebhookPayload
+from src.api_integrations.webhooks.security import (
+    verify_webhook_signature,
+    is_timestamp_valid,
+)
 import os, time
 from dotenv import load_dotenv
 from pydantic import ValidationError
-from webhooks.duplication import EventRegistry
+from src.api_integrations.webhooks.duplication import EventRegistry
 
 app = FastAPI()
 load_dotenv()

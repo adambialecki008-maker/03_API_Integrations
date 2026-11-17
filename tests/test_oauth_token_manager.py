@@ -1,4 +1,4 @@
-from oauth_token_manager import OAuth_token_manager
+from api_integrations.oauth_token_manager import OAuth_token_manager
 import pytest
 from unittest.mock import patch, call
 import httpx
@@ -66,7 +66,9 @@ def test_request_token_data_raises_on_timeout(manager):
 def test_get_token_returns_expected_data_if_no_cached_token_exists(manager):
     example_data = {"access_token": "test_token", "expires_in": 3600}
     with patch.object(manager, "request_token_data") as mock_data:
-        with patch("oauth_token_manager.time.monotonic") as mock_monotonic:
+        with patch(
+            "api_integrations.oauth_token_manager.time.monotonic"
+        ) as mock_monotonic:
             mock_monotonic.return_value = 1000
             mock_data.return_value = example_data
             data = manager.get_token()
@@ -80,7 +82,9 @@ def test_get_token_uses_cached_token(manager):
     old_data = {"access_token": "token_1", "expires_in": 3600}
     new_data = {"access_token": "token_2", "expires_in": 3600}
     with patch.object(manager, "request_token_data") as mock_data:
-        with patch("oauth_token_manager.time.monotonic") as mock_monotonic:
+        with patch(
+            "api_integrations.oauth_token_manager.time.monotonic"
+        ) as mock_monotonic:
             mock_monotonic.return_value = 1000
             mock_data.return_value = old_data
             data = manager.get_token()
@@ -97,7 +101,9 @@ def test_get_token_refreshes_token_after_time(manager):
     old_data = {"access_token": "token_1", "expires_in": 3600}
     new_data = {"access_token": "token_2", "expires_in": 3600}
     with patch.object(manager, "request_token_data") as mock_data:
-        with patch("oauth_token_manager.time.monotonic") as mock_monotonic:
+        with patch(
+            "api_integrations.oauth_token_manager.time.monotonic"
+        ) as mock_monotonic:
             mock_monotonic.return_value = 1000
             mock_data.side_effect = [old_data, new_data]
             data = manager.get_token()
@@ -117,7 +123,9 @@ def test_get_token_refreshes_at_expiration_boundary(manager):
     old_data = {"access_token": "token_1", "expires_in": 3600}
     new_data = {"access_token": "token_2", "expires_in": 3600}
     with patch.object(manager, "request_token_data") as mock_data:
-        with patch("oauth_token_manager.time.monotonic") as mock_monotonic:
+        with patch(
+            "api_integrations.oauth_token_manager.time.monotonic"
+        ) as mock_monotonic:
             mock_monotonic.return_value = 1000
             mock_data.side_effect = [old_data, new_data]
             data = manager.get_token()

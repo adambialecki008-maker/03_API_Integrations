@@ -1,7 +1,7 @@
 import httpx
 import os
 import time
-from oauth_token_manager import OAuth_token_manager
+from api_integrations.oauth_token_manager import OAuth_token_manager
 
 
 def fetch_users() -> list[dict]:

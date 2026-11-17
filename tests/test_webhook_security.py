@@ -1,4 +1,4 @@
-from webhooks.security import (
+from src.api_integrations.webhooks.security import (
     verify_webhook_signature,
     calculate_signature,
     is_timestamp_valid,

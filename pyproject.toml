@@ -1,5 +1,5 @@
 [project]
-name = "api-integrations"
+name = "api_integrations"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
@@ -13,8 +13,10 @@ dependencies = [
 dev = [
     "pytest>=9.2.0",
 ]
+[tool.setuptool.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = ["src"]
 cache_dir = ".pytest_cache"
 testpaths = ["tests"]

@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
-from webhooks.webhook_api import app
-from webhooks.webhook_api import secret
-from webhooks.security import calculate_signature
+from src.api_integrations.webhooks.webhook_api import app
+from src.api_integrations.webhooks.webhook_api import secret
+from src.api_integrations.webhooks.security import calculate_signature
 import json, time
 from uuid import uuid4
 
