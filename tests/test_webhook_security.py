@@ -1,5 +1,5 @@
-from api_integrations.webhooks.security import (
-    verify_webhook_signature,
+from api_integrations.security import (
+    verify_signature,
     calculate_signature,
     is_timestamp_valid,
 )
@@ -10,7 +10,7 @@ def test_verify_webhook_signature_accepts_valid_signature():
     raw_body = b"The quick brown fox jumps over the lazy dog"
     secret = "test_key"
     signature = calculate_signature(raw_body, secret)
-    assert verify_webhook_signature(raw_body, signature, secret) is True
+    assert verify_signature(raw_body, signature, secret) is True
 
 
 def test_calculate_signature():
@@ -28,7 +28,7 @@ def test_verify_webhook_signature_rejects_modified_body():
     body_new = b"Alarm_205"
     secret = "key"
     signature = hmac.new(secret.encode("utf-8"), body_old, hashlib.sha256).hexdigest()
-    assert verify_webhook_signature(body_new, signature, secret) is False
+    assert verify_signature(body_new, signature, secret) is False
 
 
 @pytest.mark.parametrize(

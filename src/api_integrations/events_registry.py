@@ -4,10 +4,10 @@ from api_integrations.models import WebhookPayload
 
 class EventRegistry:
     def __init__(self):
-        self.path = "events_db"
+        self.repository = None
 
     def register(self, payload: WebhookPayload) -> bool:
-        self.repository = EventsRepository(self.path)
+        self.repository = EventsRepository()
         try:
             self.repository.save_event(payload)
             return True

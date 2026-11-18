@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Header, Request, HTTPException
 from api_integrations.webhooks.webhook_handler import process_webhook
 from api_integrations.models import WebhookPayload
-from api_integrations.webhooks.security import (
-    verify_webhook_signature,
+from api_integrations.security import (
+    verify_signature,
     is_timestamp_valid,
 )
 import os, time
@@ -25,7 +25,7 @@ async def receive_webhook(
     ),
 ):
     raw_body = await request.body()
-    if not signature or not verify_webhook_signature(raw_body, signature, secret):
+    if not signature or not verify_signature(raw_body, signature, secret):
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
     try:
         payload = WebhookPayload.model_validate_json(raw_body)
@@ -39,4 +39,5 @@ async def receive_webhook(
             status_code=409,
             detail="Duplicate webhook event",
         )
+
     return process_webhook(payload)

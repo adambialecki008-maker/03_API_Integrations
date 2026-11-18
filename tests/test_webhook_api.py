@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from api_integrations.webhooks.webhook_api import app
 from api_integrations.webhooks.webhook_api import secret
-from api_integrations.webhooks.security import calculate_signature
+from api_integrations.security import calculate_signature
 import json, time, threading
 from uuid import uuid4
 from api_integrations.events_repository import EventsRepository, DuplicateEventError
@@ -12,9 +12,11 @@ client = TestClient(app)
 
 
 def test_webhook_returns_200(valid_payload, tmp_path, monkeypatch):
+
     test_path = tmp_path / "test.db"
     monkeypatch.setattr(
-        "api_integrations.webhooks.webhook_api.registry.path", test_path
+        "api_integrations.events_registry.EventsRepository",
+        lambda: EventsRepository(path=test_path),
     )
     payload = valid_payload
     raw_body = json.dumps(payload).encode("utf-8")
@@ -33,7 +35,8 @@ def test_webhook_returns_200(valid_payload, tmp_path, monkeypatch):
 def test_webhook_returns_422_on_wrong_event(valid_payload, tmp_path, monkeypatch):
     test_path = tmp_path / "test.db"
     monkeypatch.setattr(
-        "api_integrations.webhooks.webhook_api.registry.path", test_path
+        "api_integrations.events_registry.EventsRepository",
+        lambda: EventsRepository(path=test_path),
     )
     payload = valid_payload
     payload["event"] = "alarm.deleted"
@@ -48,7 +51,8 @@ def test_webhook_returns_422_on_wrong_event(valid_payload, tmp_path, monkeypatch
 def test_webhook_returns_422_on_invalid_body(tmp_path, monkeypatch):
     test_path = tmp_path / "test.db"
     monkeypatch.setattr(
-        "api_integrations.webhooks.webhook_api.registry.path", test_path
+        "api_integrations.events_registry.EventsRepository",
+        lambda: EventsRepository(path=test_path),
     )
     raw_body = json.dumps([1, 2, 3]).encode("utf-8")
     signature = calculate_signature(raw_body, secret)
@@ -70,7 +74,8 @@ def test_receive_webhook_raises_http_401_on_missing_header(
 ):
     test_path = tmp_path / "test.db"
     monkeypatch.setattr(
-        "api_integrations.webhooks.webhook_api.registry.path", test_path
+        "api_integrations.events_registry.EventsRepository",
+        lambda: EventsRepository(path=test_path),
     )
     payload = valid_payload
     raw_body = json.dumps(payload).encode("utf-8")
@@ -85,7 +90,8 @@ def test_receive_webhook_raises_http_401_on_wrong_signature(
 ):
     test_path = tmp_path / "test.db"
     monkeypatch.setattr(
-        "api_integrations.webhooks.webhook_api.registry.path", test_path
+        "api_integrations.events_registry.EventsRepository",
+        lambda: EventsRepository(path=test_path),
     )
     payload = valid_payload
     raw_body = json.dumps(payload).encode("utf-8")
@@ -101,7 +107,8 @@ def test_receive_webhook_raises_http_401_on_expired_timestamp(
 ):
     test_path = tmp_path / "test.db"
     monkeypatch.setattr(
-        "api_integrations.webhooks.webhook_api.registry.path", test_path
+        "api_integrations.events_registry.EventsRepository",
+        lambda: EventsRepository(path=test_path),
     )
     payload = valid_payload
     payload["timestamp"] = int(time.time()) - 600
@@ -123,7 +130,8 @@ def test_receive_webhook_raises_http_409_on_duplicate_registry(
 ):
     test_path = tmp_path / "test.db"
     monkeypatch.setattr(
-        "api_integrations.webhooks.webhook_api.registry.path", test_path
+        "api_integrations.events_registry.EventsRepository",
+        lambda: EventsRepository(path=test_path),
     )
     payload = valid_payload
     payload["event_id"] = f"evt_{uuid4()}"
@@ -154,11 +162,12 @@ def test_receive_webhook_raises_http_409_on_sqlite3_duplication_error(
 ):
     test_path = tmp_path / "test.db"
     monkeypatch.setattr(
-        "api_integrations.webhooks.webhook_api.registry.path", test_path
+        "api_integrations.events_registry.EventsRepository",
+        lambda: EventsRepository(path=test_path),
     )
     monkeypatch.setattr(
         EventsRepository,
-        "get_event_by_event_id",
+        "get_events",
         lambda self, event_id: None,
     )
     monkeypatch.setattr(
@@ -188,7 +197,8 @@ def test_receive_webhook_persists_history_across_registry_reinitialization(
 ):
     test_path = tmp_path / "test.db"
     monkeypatch.setattr(
-        "api_integrations.webhooks.webhook_api.registry.path", test_path
+        "api_integrations.events_registry.EventsRepository",
+        lambda: EventsRepository(path=test_path),
     )
 
     payload = valid_payload.copy()
@@ -208,7 +218,7 @@ def test_receive_webhook_persists_history_across_registry_reinitialization(
     assert first_response.status_code == 200
 
     new_registry = EventRegistry()
-    new_registry.path = test_path
+
     monkeypatch.setattr("api_integrations.webhooks.webhook_api.registry", new_registry)
 
     second_response = client.post(
@@ -225,7 +235,8 @@ def test_receive_webhook_concurrent_requests_real_sqlite_returns_200_and_409(
 ):
     test_path = tmp_path / "test_concurrent.db"
     monkeypatch.setattr(
-        "api_integrations.webhooks.webhook_api.registry.path", test_path
+        "api_integrations.events_registry.EventsRepository",
+        lambda: EventsRepository(path=test_path),
     )
 
     payload = valid_payload.copy()

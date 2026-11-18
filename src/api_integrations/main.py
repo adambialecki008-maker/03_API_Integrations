@@ -1,8 +1,8 @@
-from api_integrations.webhooks.security import calculate_signature
+from api_integrations.security import calculate_signature
 import secrets
 
 raw_body = b"The quick brown fox jumps over the lazy dog"
-secret = "test_key"
+secret = "test-key-123"
 
 print(calculate_signature(raw_body, secret))
 secret = secrets.token_hex(32)

@@ -1,7 +1,12 @@
 from api_integrations.events_registry import EventRegistry
 import time, pytest
-from api_integrations.models import RegisteredEvent, AlarmData, WebhookPayload
+from api_integrations.models import (
+    RegisteredEvent,
+    AlarmData,
+    WebhookPayload,
+)
 from unittest.mock import patch
+from api_integrations.events_repository import EventsRepository
 
 
 @pytest.fixture
@@ -45,7 +50,11 @@ def expected_event():
 def test_event_registry_returns_none(valid_events, tmp_path, monkeypatch):
     test_path = tmp_path / "test.db"
     registry = EventRegistry()
-    monkeypatch.setattr(registry, "path", test_path)
+    test_path = tmp_path / "test.db"
+    monkeypatch.setattr(
+        "api_integrations.events_registry.EventsRepository",
+        lambda: EventsRepository(path=test_path),
+    )
 
     event_1, event_2 = valid_events
     assert registry.register(event_1) is True

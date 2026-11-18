@@ -1,13 +1,17 @@
 import sqlite3, time
 from pathlib import Path
-from api_integrations.models import RegisteredEvent, AlarmData, WebhookPayload
+from api_integrations.models import (
+    RegisteredEvent,
+    AlarmData,
+    WebhookPayload,
+)
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 
 def format_timestamp(timestamp: int) -> str:
-    dt = datetime.fromtimestamp(timestamp, tz=ZoneInfo("Europe/Warsaw"))
-    return dt.strftime("%d-%m-%Y %H:%M:%S")
+    dt = datetime.fromtimestamp(timestamp, tz=ZoneInfo("UTC"))
+    return dt.isoformat()
 
 
 class DuplicateEventError(Exception):
@@ -15,12 +19,13 @@ class DuplicateEventError(Exception):
 
 
 class EventsRepository:
-    def __init__(self, database_name: str | Path):
-        self.database_name = database_name
+
+    def __init__(self, path: str | Path = "events.db"):
+        self.path = path
         self.create_table()
 
     def connect(self):
-        return sqlite3.connect(self.database_name)
+        return sqlite3.connect(self.path)
 
     def create_table(self):
         connection = None
@@ -75,30 +80,59 @@ class EventsRepository:
             if connection:
                 connection.close()
 
-    def get_event_by_event_id(self, event_id: str) -> RegisteredEvent | None:
+    def get_events(
+        self,
+        event_id: str | None = None,
+        machine: str | None = None,
+        time_from: datetime | None = None,
+        time_to: datetime | None = None,
+    ) -> list[RegisteredEvent]:
         connection = None
-        result = None
+        results = []
+
+        if time_to is not None and time_from is not None and time_to < time_from:
+            raise ValueError("time_from cannot be later than time_to")
         try:
+            params = []
+            conditions = []
+            query = """SELECT event_id,event, machine, alarm_code, timestamp, received_at FROM events """
+            if event_id is not None:
+                params.append(event_id)
+                conditions.append("event_id=?")
+            if machine is not None:
+                params.append(machine)
+                conditions.append("machine=?")
             connection = self.connect()
             cursor = connection.cursor()
-            cursor.execute(
-                """ SELECT  event, machine, alarm_code, timestamp, received_at FROM events WHERE event_id=?""",
-                (event_id,),
-            )
-            row = cursor.fetchone()
-            if row is not None:
-                alarm_data = AlarmData(machine=row[1], alarm_code=row[2])
-                result = RegisteredEvent(
-                    event_id=event_id,
-                    event=row[0],
-                    data=alarm_data,
-                    timestamp=row[3],
-                    received_at=row[4],
-                )
-            return result
+            if time_from is not None:
+                params.append(time_from)
+                conditions.append("timestamp >= ?")
+            if time_to is not None:
+                params.append(time_to)
+                conditions.append("timestamp < ?")
+            if conditions:
+                query += "WHERE " + " AND ".join(conditions)
+            query += "ORDER BY timestamp "
+            cursor.execute(query, params)
+
+            rows = cursor.fetchall()
+            if rows is not None:
+                for row in rows:
+                    alarm_data = AlarmData(machine=row[2], alarm_code=row[3])
+
+                    result = RegisteredEvent(
+                        event_id=row[0],
+                        event=row[1],
+                        data=alarm_data,
+                        timestamp=row[4],
+                        received_at=row[5],
+                    )
+                    results.append(result)
+            return results
         except sqlite3.Error as e:
             print(f"Error during getting event: {event_id}")
             raise
         finally:
             if connection:
                 connection.close()
+            return results
