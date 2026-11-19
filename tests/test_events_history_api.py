@@ -52,7 +52,7 @@ def test_get_alarms_history_returns_200_and_expected_data(valid_history_request)
     headers = {"X-API-Key": secret}
 
     with patch("api_integrations.events_history.api.process_request") as mock_request:
-        mock_request.return_value = mock_request.return_value = {
+        mock_request.return_value = {
             "events": [expected_event],
             "total": 5,
         }
