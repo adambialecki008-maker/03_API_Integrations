@@ -3,7 +3,7 @@ from api_integrations.events_repository import EventsRepository
 from datetime import datetime
 
 
-def process_request(request: EventsHistoryRequest) -> tuple[list[RegisteredEvent], int]:
+def process_request(request: EventsHistoryRequest) -> dict:
     event_id = request.event_id
     machine = request.machine
     time_from = (
@@ -27,4 +27,4 @@ def process_request(request: EventsHistoryRequest) -> tuple[list[RegisteredEvent
         offset=offset,
     )
 
-    return results, total
+    return {"events": results, "total": total}
