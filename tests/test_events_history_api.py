@@ -1,6 +1,11 @@
 from fastapi.testclient import TestClient
 from api_integrations.events_history.api import app, secret
 from unittest.mock import patch
+from api_integrations.models import (
+    AlarmData,
+    RegisteredEvent,
+    EventsHistoryRequest,
+)
 
 client = TestClient(app)
 
@@ -29,13 +34,38 @@ def test_get_events_returns_200_and_no_data_if_empty_request():
 
 def test_get_alarms_history_returns_200_and_expected_data(valid_history_request):
     request = valid_history_request.model_dump()
+    expected_event = RegisteredEvent(
+        event_id="evt_001",
+        event="alarm.created",
+        timestamp="2026-11-17T16:19:30+00:00",
+        received_at="2026-11-17T16:19:31+00:00",
+        data=AlarmData(
+            machine="PLC_01",
+            alarm_code=204,
+        ),
+    )
+    expected_response = {
+        "events": [expected_event.model_dump(mode="json")],
+        "total": 5,
+    }
     headers = {"X-API-Key": secret}
 
     with patch("api_integrations.events_history.api.process_request") as mock_request:
-        mock_request.return_value = {"events": [valid_history_request], "total": 1}
+        mock_request.return_value = mock_request.return_value = {
+            "events": [expected_event],
+            "total": 5,
+        }
+
         response = client.get("/events", headers=headers, params=request)
     assert response.status_code == 200
-    assert response.json() == {"events": [request], "total": 1}
+    assert response.json() == expected_response
+    mock_request.assert_called_once()
+    received_request = mock_request.call_args.args[0]
+
+    assert isinstance(received_request, EventsHistoryRequest)
+    assert received_request == valid_history_request
+    assert received_request.limit == 10
+    assert received_request.offset == 2
 
 
 def test_get_alarm_history_returns_http_422_on_incorrect_data_format(
