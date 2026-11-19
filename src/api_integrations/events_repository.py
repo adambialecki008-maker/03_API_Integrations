@@ -9,9 +9,12 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 
-def format_timestamp(timestamp: int) -> str:
-    dt = datetime.fromtimestamp(timestamp, tz=ZoneInfo("UTC"))
-    return dt.isoformat()
+def format_timestamp(timestamp: int | datetime | str) -> str:
+    if isinstance(timestamp, int):
+        return datetime.fromtimestamp(timestamp, tz=ZoneInfo("UTC")).isoformat()
+    if isinstance(timestamp, datetime):
+        return timestamp.astimezone(ZoneInfo("UTC")).isoformat()
+    return timestamp
 
 
 class DuplicateEventError(Exception):
@@ -106,10 +109,10 @@ class EventsRepository:
             connection = self.connect()
             cursor = connection.cursor()
             if time_from is not None:
-                params.append(time_from)
+                params.append(format_timestamp(time_from))
                 conditions.append("timestamp >= ?")
             if time_to is not None:
-                params.append(time_to)
+                params.append(format_timestamp(time_to))
                 conditions.append("timestamp < ?")
 
             if conditions:
