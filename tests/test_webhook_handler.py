@@ -1,4 +1,4 @@
-from api_integrations.webhooks.webhook_handler import process_webhook
+from api_integrations.webhooks.handler import process_webhook
 from api_integrations.models import WebhookPayload
 
 

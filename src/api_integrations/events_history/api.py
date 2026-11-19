@@ -2,7 +2,7 @@ from fastapi import HTTPException, Header, Depends
 from api_integrations.models import EventsHistoryRequest
 import os
 from dotenv import load_dotenv
-from api_integrations.events_history.events_history_handler import (
+from api_integrations.events_history.handler import (
     process_request,
 )
 from api_integrations.main import app

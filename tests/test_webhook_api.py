@@ -1,6 +1,5 @@
 from fastapi.testclient import TestClient
-from api_integrations.webhooks.webhook_api import app
-from api_integrations.webhooks.webhook_api import secret
+from api_integrations.webhooks.api import app, secret
 from api_integrations.security import calculate_signature
 import json, time, threading
 from uuid import uuid4
@@ -219,7 +218,7 @@ def test_receive_webhook_persists_history_across_registry_reinitialization(
 
     new_registry = EventRegistry()
 
-    monkeypatch.setattr("api_integrations.webhooks.webhook_api.registry", new_registry)
+    monkeypatch.setattr("api_integrations.webhooks.api.registry", new_registry)
 
     second_response = client.post(
         "/webhook",

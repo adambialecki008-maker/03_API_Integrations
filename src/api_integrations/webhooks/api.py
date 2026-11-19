@@ -1,5 +1,5 @@
 from fastapi import Header, Request, HTTPException
-from api_integrations.webhooks.webhook_handler import process_webhook
+from api_integrations.webhooks.handler import process_webhook
 from api_integrations.models import WebhookPayload
 from api_integrations.security import (
     verify_signature,
