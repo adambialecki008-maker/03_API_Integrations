@@ -74,3 +74,12 @@ def test_get_alarm_history_returns_http_422_on_limit_out_of_bounds(
     request = invalid_request.model_dump()
     response = client.get("/events", headers=headers, params=request)
     assert response.status_code == 422
+
+
+def test_alarm_history_returns_http_422_on_offset_out_of_bounds(valid_history_request):
+    headers = {"X-API-Key": secret}
+    invalid_requaest = valid_history_request
+    invalid_requaest.offset = -1
+    request = invalid_requaest.model_dump()
+    response = client.get("/events", headers=headers, params=request)
+    assert response.status_code == 422

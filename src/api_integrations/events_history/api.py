@@ -18,6 +18,7 @@ def validate_history_request(
     time_from: str | None = Query(default=None),
     time_to: str | None = Query(default=None),
     limit: int = Query(default=100),
+    offset: int = Query(default=0),
 ) -> EventsHistoryRequest:
 
     try:
@@ -27,6 +28,7 @@ def validate_history_request(
             time_from=time_from,
             time_to=time_to,
             limit=limit,
+            offset=offset,
         )
     except ValidationError as e:
         raise HTTPException(

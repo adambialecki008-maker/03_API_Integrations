@@ -15,6 +15,7 @@ def process_request(request: EventsHistoryRequest) -> tuple[list[RegisteredEvent
         datetime.fromisoformat(request.time_to) if request.time_to is not None else None
     )
     limit = request.limit
+    offset = request.offset
     repository = EventsRepository()
 
     results, total = repository.get_events(
@@ -23,6 +24,7 @@ def process_request(request: EventsHistoryRequest) -> tuple[list[RegisteredEvent
         time_from=time_from,
         time_to=time_to,
         limit=limit,
+        offset=offset,
     )
 
     return results, total

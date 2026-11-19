@@ -121,7 +121,7 @@ class EventsRepository:
             if conditions:
                 query += "WHERE " + " AND ".join(conditions)
                 query_total += "WHERE " + " AND ".join(conditions)
-            query += "ORDER BY timestamp DESC "
+            query += "ORDER BY timestamp DESC, id DESC "
             if limit is not None:
                 query += f" LIMIT {limit}"
             if offset is not None:

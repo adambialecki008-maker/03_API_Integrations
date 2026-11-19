@@ -18,7 +18,7 @@ def test_events_history_hanlder_with_params(valid_history_request):
         received_at="2026-11-17T16:19:30+00:00",
     )
     request = valid_history_request
-
+    request.offset = 2
     with patch(
         "api_integrations.events_history.handler.EventsRepository"
     ) as mock_repository_class:
@@ -33,6 +33,7 @@ def test_events_history_hanlder_with_params(valid_history_request):
             time_from=datetime(2026, 11, 17, 16, 19, 20, tzinfo=ZoneInfo("UTC")),
             time_to=datetime(2026, 11, 17, 16, 19, 30, tzinfo=ZoneInfo("UTC")),
             limit=10,
+            offset=2,
         )
 
 
@@ -57,4 +58,5 @@ def test_events_handler_with_no_time_params():
             time_from=None,
             time_to=None,
             limit=10,
+            offset=0,
         )
