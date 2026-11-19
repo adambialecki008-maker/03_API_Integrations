@@ -102,7 +102,8 @@ class EventsRepository:
             conditions = []
             total = 0
             query = """SELECT event_id,event, machine, alarm_code, timestamp, received_at FROM events """
-            query_total = """SELECT COUNT(*) OVER() AS total FROM events """
+            query_total = """SELECT COUNT(*) OVER() AS total FROM events 
+            """
             if event_id is not None:
                 params.append(event_id)
                 conditions.append("event_id=?")
@@ -122,15 +123,17 @@ class EventsRepository:
                 query += "WHERE " + " AND ".join(conditions)
                 query_total += "WHERE " + " AND ".join(conditions)
             query += "ORDER BY timestamp DESC, id DESC "
-            if limit is not None:
-                query += f" LIMIT {limit}"
-            if offset is not None:
-                query += f" OFFSET {offset}"
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
             cursor.execute(query_total, params)
             total_row = cursor.fetchone()
             total = total_row[0] if total_row else 0
+            if limit is not None:
+                query += " LIMIT ? "
+                params.append(int(limit))
+            if offset is not None:
+                query += " OFFSET ? "
+                params.append(int(offset))
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
 
             if rows is not None:
                 for row in rows:

@@ -1,8 +1,6 @@
 from fastapi.testclient import TestClient
 from api_integrations.events_history.api import app, secret
 from unittest.mock import patch
-import pytest, json
-from api_integrations.models import EventsHistoryRequest
 
 client = TestClient(app)
 
@@ -23,10 +21,10 @@ def test_get_events_returns_http_401_if_invalid_api_key():
 def test_get_events_returns_200_and_no_data_if_empty_request():
     headers = {"X-API-Key": secret}
     with patch("api_integrations.events_history.api.process_request") as mock_request:
-        mock_request.return_value = []
+        mock_request.return_value = {"events": [], "total": 0}
         response = client.get("/events", headers=headers)
     assert response.status_code == 200
-    assert response.json() == []
+    assert response.json() == {"events": [], "total": 0}
 
 
 def test_get_alarms_history_returns_200_and_expected_data(valid_history_request):
@@ -34,10 +32,10 @@ def test_get_alarms_history_returns_200_and_expected_data(valid_history_request)
     headers = {"X-API-Key": secret}
 
     with patch("api_integrations.events_history.api.process_request") as mock_request:
-        mock_request.return_value = "what I expected "
+        mock_request.return_value = {"events": [valid_history_request], "total": 1}
         response = client.get("/events", headers=headers, params=request)
     assert response.status_code == 200
-    assert response.json() == "what I expected "
+    assert response.json() == {"events": [request], "total": 1}
 
 
 def test_get_alarm_history_returns_http_422_on_incorrect_data_format(
