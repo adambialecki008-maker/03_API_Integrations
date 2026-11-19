@@ -34,8 +34,7 @@ def parse_utc_iso(value: str | None) -> str | None:
     return dt.astimezone(ZoneInfo("UTC")).isoformat()
 
 
-Time_Registered = Annotated[str, BeforeValidator(parse_utc_iso)]
-Time_Requested = Annotated[str | None, BeforeValidator(parse_utc_iso)]
+TimestampUTC = Annotated[str, BeforeValidator(parse_utc_iso)]
 
 
 class WebhookPayload(BaseModel):
@@ -49,15 +48,15 @@ class RegisteredEvent(BaseModel):
     event_id: str = Field(min_length=1, pattern=r"\S")
     event: Literal["alarm.created"]
     data: AlarmData
-    timestamp: Time_Registered
-    received_at: Time_Registered
+    timestamp: TimestampUTC
+    received_at: TimestampUTC
 
 
 class EventsHistoryRequest(BaseModel):
     event_id: str | None = None
     machine: str | None = None
-    time_from: Time_Requested
-    time_to: Time_Requested
+    time_from: TimestampUTC | None = None
+    time_to: TimestampUTC | None = None
     limit: int | None = Field(ge=1, le=100, default=100)
 
     @model_validator(mode="after")

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Header, Request, HTTPException
+from fastapi import Header, Request, HTTPException
 from api_integrations.webhooks.webhook_handler import process_webhook
 from api_integrations.models import WebhookPayload
 from api_integrations.security import (
@@ -9,10 +9,11 @@ import os, time
 from dotenv import load_dotenv
 from pydantic import ValidationError
 from api_integrations.events_registry import EventRegistry
+from api_integrations.main import app
 
-app = FastAPI()
 load_dotenv()
 secret = os.environ["WEBHOOK_SECRET"]
+
 registry = EventRegistry()
 
 

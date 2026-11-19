@@ -230,5 +230,34 @@ def test_get_events_gets_events_by_time_from_and_to(
             time_from="2026-11-17T16:19:28+00:00", time_to="2026-11-17T16:19:30+00:00"
         )
         assert len(results) == 2
-        assert results[0] == expected_1
+        assert results[0] == expected_2
+        assert results[1] == expected_1
+
+
+def test_get_events_gets_with_limit(
+    repository, valid_events, valid_extra_events, expected_events
+):
+    event_1, event_2 = valid_events
+    event_3, event_4 = valid_extra_events
+    _, expected_2 = expected_events
+
+    expected_4 = RegisteredEvent(
+        event_id=event_4.event_id,
+        event=event_4.event,
+        timestamp=format_timestamp(event_4.timestamp),
+        data=event_4.data,
+        received_at=format_timestamp(1794932369),
+    )
+    with patch("time.time") as mock_time:
+        mock_time.return_value = event_1.timestamp
+        repository.save_event(event_1)
+        mock_time.return_value = event_2.timestamp
+        repository.save_event(event_2)
+        repository.save_event(event_3)
+        repository.save_event(event_4)
+        all_events = repository.get_events()
+        assert len(all_events) == 4
+        results = repository.get_events(limit=2)
+        assert len(results) == 2
+        assert results[0] == expected_4
         assert results[1] == expected_2

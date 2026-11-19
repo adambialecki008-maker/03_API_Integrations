@@ -1,0 +1,26 @@
+from api_integrations.models import EventsHistoryRequest, RegisteredEvent
+from api_integrations.events_repository import EventsRepository
+from datetime import datetime
+
+
+def process_request(request: EventsHistoryRequest) -> list[RegisteredEvent]:
+    event_id = request.event_id
+    machine = request.machine
+    time_from = (
+        datetime.fromisoformat(request.time_from)
+        if request.time_from is not None
+        else None
+    )
+    time_to = (
+        datetime.fromisoformat(request.time_to) if request.time_to is not None else None
+    )
+    limit = request.limit
+    repository = EventsRepository()
+    results = repository.get_events(
+        event_id=event_id,
+        machine=machine,
+        time_from=time_from,
+        time_to=time_to,
+        limit=limit,
+    )
+    return results

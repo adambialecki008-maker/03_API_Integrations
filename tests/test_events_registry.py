@@ -7,6 +7,7 @@ from api_integrations.models import (
 )
 from unittest.mock import patch
 from api_integrations.events_repository import EventsRepository
+from datetime import datetime
 
 
 @pytest.fixture
@@ -41,9 +42,9 @@ def expected_event():
     return RegisteredEvent(
         event_id="evt_001",
         event="alarm.created",
-        timestamp="17-11-2026 13:42:09",
+        timestamp=datetime.fromisoformat("17-11-2026 13:42:09"),
         data=AlarmData(machine="PLC_01", alarm_code=204),
-        received_at="17-11-2026 13:42:09",
+        received_at=datetime.fromisoformat("17-11-2026 13:42:09"),
     )
 
 

@@ -86,6 +86,7 @@ class EventsRepository:
         machine: str | None = None,
         time_from: datetime | None = None,
         time_to: datetime | None = None,
+        limit: int | None = None,
     ) -> list[RegisteredEvent]:
         connection = None
         results = []
@@ -110,9 +111,12 @@ class EventsRepository:
             if time_to is not None:
                 params.append(time_to)
                 conditions.append("timestamp < ?")
+
             if conditions:
                 query += "WHERE " + " AND ".join(conditions)
-            query += "ORDER BY timestamp "
+            query += "ORDER BY timestamp DESC "
+            if limit is not None:
+                query += f" LIMIT {limit}"
             cursor.execute(query, params)
 
             rows = cursor.fetchall()
@@ -135,4 +139,3 @@ class EventsRepository:
         finally:
             if connection:
                 connection.close()
-            return results

@@ -3,8 +3,7 @@ from api_integrations.models import (
     EventsHistoryRequest,
     RegisteredEvent,
     AlarmData,
-    Time_Registered,
-    Time_Requested,
+    TimestampUTC,
 )
 import pytest
 from pydantic import ValidationError, TypeAdapter
@@ -126,8 +125,7 @@ def test_registered_event_rejects_invalid_received_at_format(
         event = RegisteredEvent.model_validate(raw_event)
 
 
-registered_adapter = TypeAdapter(Time_Registered)
-requested_adapter = TypeAdapter(Time_Requested)
+timestamp_adapter = TypeAdapter(TimestampUTC)
 
 
 @pytest.mark.parametrize(
@@ -143,9 +141,7 @@ requested_adapter = TypeAdapter(Time_Requested)
 )
 def test_timestamp_utc_rejects_invalid_format(invalid_input):
     with pytest.raises(ValidationError):
-        registered_adapter.validate_python(invalid_input)
-    with pytest.raises(ValidationError):
-        requested_adapter.validate_python(invalid_input)
+        timestamp_adapter.validate_python(invalid_input)
 
 
 @pytest.mark.parametrize(
@@ -157,17 +153,12 @@ def test_timestamp_utc_rejects_invalid_format(invalid_input):
     ],
 )
 def test_timestamp_utc_normalizes_to_utc(input_dt, expected_utc):
-    assert registered_adapter.validate_python(input_dt) == expected_utc
-    assert requested_adapter.validate_python(input_dt) == expected_utc
-
-
-def test_time_requested_accepts_none():
-    assert requested_adapter.validate_python(None) is None
+    assert timestamp_adapter.validate_python(input_dt) == expected_utc
 
 
 def test_time_registered_rejects_none():
     with pytest.raises(ValidationError):
-        registered_adapter.validate_python(None)
+        timestamp_adapter.validate_python(None)
 
 
 #######EventsHistoryRequest##########################################################
