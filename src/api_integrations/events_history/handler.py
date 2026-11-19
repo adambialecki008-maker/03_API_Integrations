@@ -16,6 +16,7 @@ def process_request(request: EventsHistoryRequest) -> list[RegisteredEvent]:
     )
     limit = request.limit
     repository = EventsRepository()
+
     results = repository.get_events(
         event_id=event_id,
         machine=machine,
@@ -23,4 +24,5 @@ def process_request(request: EventsHistoryRequest) -> list[RegisteredEvent]:
         time_to=time_to,
         limit=limit,
     )
+
     return results
