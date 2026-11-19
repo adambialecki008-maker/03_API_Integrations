@@ -33,6 +33,7 @@ def test_get_events_returns_200_and_no_data_if_empty_request():
 
 
 def test_get_alarms_history_returns_200_and_expected_data(valid_history_request):
+    valid_history_request.offset = 2
     request = valid_history_request.model_dump()
     expected_event = RegisteredEvent(
         event_id="evt_001",
