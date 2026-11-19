@@ -90,7 +90,8 @@ class EventsRepository:
         time_from: datetime | None = None,
         time_to: datetime | None = None,
         limit: int | None = None,
-    ) -> list[RegisteredEvent]:
+        offset: int | None = None,
+    ) -> tuple[list[RegisteredEvent], int]:
         connection = None
         results = []
 
@@ -99,7 +100,9 @@ class EventsRepository:
         try:
             params = []
             conditions = []
+            total = 0
             query = """SELECT event_id,event, machine, alarm_code, timestamp, received_at FROM events """
+            query_total = """SELECT COUNT(*) OVER() AS total FROM events """
             if event_id is not None:
                 params.append(event_id)
                 conditions.append("event_id=?")
@@ -117,12 +120,18 @@ class EventsRepository:
 
             if conditions:
                 query += "WHERE " + " AND ".join(conditions)
+                query_total += "WHERE " + " AND ".join(conditions)
             query += "ORDER BY timestamp DESC "
             if limit is not None:
                 query += f" LIMIT {limit}"
+            if offset is not None:
+                query += f" OFFSET {offset}"
             cursor.execute(query, params)
-
             rows = cursor.fetchall()
+            cursor.execute(query_total, params)
+            total_row = cursor.fetchone()
+            total = total_row[0] if total_row else 0
+
             if rows is not None:
                 for row in rows:
                     alarm_data = AlarmData(machine=row[2], alarm_code=row[3])
@@ -135,7 +144,7 @@ class EventsRepository:
                         received_at=row[5],
                     )
                     results.append(result)
-            return results
+            return results, total
         except sqlite3.Error as e:
             print(f"Error during getting event: {event_id}")
             raise

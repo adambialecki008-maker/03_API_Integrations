@@ -57,6 +57,7 @@ class EventsHistoryRequest(BaseModel):
     time_from: TimestampUTC | None = None
     time_to: TimestampUTC | None = None
     limit: int | None = Field(ge=1, le=100, default=100)
+    offset: int | None = Field(ge=0, default=0)
 
     @model_validator(mode="after")
     def check_time_range(self) -> "EventsHistoryRequest":

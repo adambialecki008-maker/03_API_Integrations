@@ -23,10 +23,10 @@ def test_get_events_returns_http_401_if_invalid_api_key():
 def test_get_events_returns_200_and_no_data_if_empty_request():
     headers = {"X-API-Key": secret}
     with patch("api_integrations.events_history.api.process_request") as mock_request:
-        mock_request.return_value = "what I expected "
+        mock_request.return_value = []
         response = client.get("/events", headers=headers)
     assert response.status_code == 200
-    assert response.json() == "what I expected "
+    assert response.json() == []
 
 
 def test_get_alarms_history_returns_200_and_expected_data(valid_history_request):

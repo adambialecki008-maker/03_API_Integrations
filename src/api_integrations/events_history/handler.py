@@ -3,7 +3,7 @@ from api_integrations.events_repository import EventsRepository
 from datetime import datetime
 
 
-def process_request(request: EventsHistoryRequest) -> list[RegisteredEvent]:
+def process_request(request: EventsHistoryRequest) -> tuple[list[RegisteredEvent], int]:
     event_id = request.event_id
     machine = request.machine
     time_from = (
@@ -17,7 +17,7 @@ def process_request(request: EventsHistoryRequest) -> list[RegisteredEvent]:
     limit = request.limit
     repository = EventsRepository()
 
-    results = repository.get_events(
+    results, total = repository.get_events(
         event_id=event_id,
         machine=machine,
         time_from=time_from,
@@ -25,4 +25,4 @@ def process_request(request: EventsHistoryRequest) -> list[RegisteredEvent]:
         limit=limit,
     )
 
-    return results
+    return results, total

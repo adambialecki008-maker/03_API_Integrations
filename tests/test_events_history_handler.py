@@ -23,9 +23,9 @@ def test_events_history_hanlder_with_params(valid_history_request):
         "api_integrations.events_history.handler.EventsRepository"
     ) as mock_repository_class:
         mock_repository = mock_repository_class.return_value
-        mock_repository.get_events.return_value = expected_events
+        mock_repository.get_events.return_value = expected_events, 1
 
-        results = process_request(request)
+        results, total = process_request(request)
         assert results == expected_events
         mock_repository.get_events.assert_called_once_with(
             event_id="evt_001",
@@ -48,9 +48,9 @@ def test_events_handler_with_no_time_params():
         "api_integrations.events_history.handler.EventsRepository"
     ) as mock_repository_class:
         mock_repository = mock_repository_class.return_value
-        mock_repository.get_events.return_value = []
+        mock_repository.get_events.return_value = [[], 0]
         results = process_request(request)
-        assert results == []
+        assert results == ([], 0)
         mock_repository.get_events.assert_called_once_with(
             event_id=None,
             machine=None,

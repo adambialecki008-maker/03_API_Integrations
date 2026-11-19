@@ -114,12 +114,12 @@ def test_save_event_adds_expected_event(repository, valid_events, expected_event
     with patch("time.time") as mock_time:
         mock_time.return_value = 1794932368
         repository.save_event(event_1)
-        results = repository.get_events(event_id=event_1.event_id)
+        results, total = repository.get_events(event_id=event_1.event_id)
         assert results[0] == expected_event
 
 
 def test_get_events_returns_none_if_no_event(repository):
-    results = repository.get_events(event_id="evt_05")
+    results, total = repository.get_events(event_id="evt_05")
     assert results == []
 
 
@@ -147,9 +147,9 @@ def test_get_events_gets_event_by_id(repository, valid_events, expected_events):
         mock_time.return_value = event_1.timestamp
         repository.save_event(event_1)
         repository.save_event(event_2)
-        result = repository.get_events(event_id=event_1.event_id)
-        assert expected_1 == result[0]
-        assert len(result) == 1
+        results, total = repository.get_events(event_id=event_1.event_id)
+        assert expected_1 == results[0]
+        assert len(results) == 1
 
 
 def test_get_events_by_machine_returns_expected_event(
@@ -161,10 +161,10 @@ def test_get_events_by_machine_returns_expected_event(
         mock_time.return_value = event_2.timestamp
         repository.save_event(event_1)
         repository.save_event(event_2)
-        result = repository.get_events(machine=event_2.data.machine)
+        results, total = repository.get_events(machine=event_2.data.machine)
         expected_2.received_at = expected_2.timestamp
-        assert expected_2 == result[0]
-        assert len(result) == 1
+        assert expected_2 == results[0]
+        assert len(results) == 1
 
 
 def test_get_events_gets_events_by_time_from(repository, valid_events, expected_events):
@@ -177,7 +177,7 @@ def test_get_events_gets_events_by_time_from(repository, valid_events, expected_
         expected_1.received_at = expected_1.timestamp
         repository.save_event(event_1)
         repository.save_event(event_2)
-        results = repository.get_events(time_from="2026-11-17T16:19:30+00:00")
+        results, total = repository.get_events(time_from="2026-11-17T16:19:30+00:00")
         assert len(results) == 1
         assert results[0] == expected_1
 
@@ -191,7 +191,7 @@ def test_get_events_gets_events_by_time_to(repository, valid_events, expected_ev
         event_2.timestamp = 1794932369
         repository.save_event(event_1)
         repository.save_event(event_2)
-        results = repository.get_events(time_to="2026-11-17T16:19:30+00:00")
+        results, total = repository.get_events(time_to="2026-11-17T16:19:30+00:00")
         assert len(results) == 1
         assert results[0] == expected_2
 
@@ -206,7 +206,7 @@ def test_get_events_returns_without_exac_time_to(
 
         repository.save_event(event_1)
         repository.save_event(event_2)
-        results = repository.get_events(time_to=expected_2.timestamp)
+        results, total = repository.get_events(time_to=expected_2.timestamp)
         assert len(results) == 1
         assert results[0] == expected_1
 
@@ -224,9 +224,9 @@ def test_get_events_gets_events_by_time_from_and_to(
         repository.save_event(event_2)
         repository.save_event(event_3)
         repository.save_event(event_4)
-        all_events = repository.get_events()
+        all_events, total = repository.get_events()
         assert len(all_events) == 4
-        results = repository.get_events(
+        results, total = repository.get_events(
             time_from="2026-11-17T16:19:28+00:00", time_to="2026-11-17T16:19:30+00:00"
         )
         assert len(results) == 2
@@ -255,9 +255,82 @@ def test_get_events_gets_with_limit(
         repository.save_event(event_2)
         repository.save_event(event_3)
         repository.save_event(event_4)
-        all_events = repository.get_events()
+        all_events, total = repository.get_events()
         assert len(all_events) == 4
-        results = repository.get_events(limit=2)
+        results, total = repository.get_events(limit=2)
         assert len(results) == 2
         assert results[0] == expected_4
         assert results[1] == expected_2
+
+
+def test_get_events_gets_with_limit_and_offset(
+    repository, valid_events, valid_extra_events, expected_events
+):
+    event_1, event_2 = valid_events
+    event_3, event_4 = valid_extra_events
+    expected_1, expected_2 = expected_events
+    expected_3 = RegisteredEvent(
+        event_id=event_3.event_id,
+        event=event_3.event,
+        timestamp=format_timestamp(event_3.timestamp),
+        data=event_3.data,
+        received_at=format_timestamp(1794932369),
+    )
+    expected_4 = RegisteredEvent(
+        event_id=event_4.event_id,
+        event=event_4.event,
+        timestamp=format_timestamp(event_4.timestamp),
+        data=event_4.data,
+        received_at=format_timestamp(1794932369),
+    )
+    with patch("time.time") as mock_time:
+        mock_time.return_value = event_1.timestamp
+        repository.save_event(event_1)
+        mock_time.return_value = event_2.timestamp
+        repository.save_event(event_2)
+        repository.save_event(event_3)
+        repository.save_event(event_4)
+        all_events, total = repository.get_events()
+        assert len(all_events) == 4
+        results, total = repository.get_events(limit=10, offset=1)
+        assert len(results) == 3
+        assert results[0] == expected_2
+        assert results[1] == expected_1
+        assert results[2] == expected_3
+
+
+def test_get_events_gets_correct_total(
+    repository, valid_events, valid_extra_events, expected_events
+):
+    event_1, event_2 = valid_events
+    event_3, event_4 = valid_extra_events
+    expected_1, expected_2 = expected_events
+    expected_3 = RegisteredEvent(
+        event_id=event_3.event_id,
+        event=event_3.event,
+        timestamp=format_timestamp(event_3.timestamp),
+        data=event_3.data,
+        received_at=format_timestamp(1794932369),
+    )
+    expected_4 = RegisteredEvent(
+        event_id=event_4.event_id,
+        event=event_4.event,
+        timestamp=format_timestamp(event_4.timestamp),
+        data=event_4.data,
+        received_at=format_timestamp(1794932369),
+    )
+    with patch("time.time") as mock_time:
+        mock_time.return_value = event_1.timestamp
+        repository.save_event(event_1)
+        mock_time.return_value = event_2.timestamp
+        repository.save_event(event_2)
+        repository.save_event(event_3)
+        repository.save_event(event_4)
+        all_events, total = repository.get_events()
+        assert len(all_events) == 4
+        results, total = repository.get_events(limit=10, offset=1)
+        assert len(results) == 3
+        assert results[0] == expected_2
+        assert results[1] == expected_1
+        assert results[2] == expected_3
+        assert total == 4
