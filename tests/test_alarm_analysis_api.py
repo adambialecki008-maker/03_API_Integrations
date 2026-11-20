@@ -81,7 +81,7 @@ def test_post_analyzed_note_raises_http_422_if_validation_error():
     assert response.status_code == 422
 
 
-def test_post_analyzed_note_raises_http_422_if_value_error():
+def test_post_analyzed_note_raises_http_502_if_value_error():
     note = "PLC_01 - Conveyor stopped after motor overload protection tripped. Operator requests an electrical inspection before restarting the line."
     headers = {"Content-Type": "application/json", "X-API-Key": secret}
     content = AlarmNoteRequest(note=note).model_dump_json()

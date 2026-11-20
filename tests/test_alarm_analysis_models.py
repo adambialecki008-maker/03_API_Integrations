@@ -58,7 +58,7 @@ def test_alarm_analysis_succees_with_boundary_conditions(
     AlarmNoteAnalysis.model_validate(raw_note)
 
 
-@pytest.mark.parametrize("param", [0, ""])
+@pytest.mark.parametrize("param", [0, "", {"note": ""}])
 def test_alarm_note_request_raises_invalid_data(param):
     with pytest.raises(ValidationError):
         AlarmNoteRequest.model_validate(param)

@@ -30,7 +30,7 @@ def test_alarm_analyzer_raises_on_evidence_not_in_note(valid_alarm_note):
     with patch(
         "api_integrations.alarms_analysis.analyzer.ollama_client.chat"
     ) as mock_chat:
-        mock_chat.return_value = mock_chat.return_value = {
+        mock_chat.return_value = {
             "message": {
                 "content": test_json,
             },
