@@ -6,6 +6,7 @@ dependencies = [
     "dotenv>=0.9.9",
     "fastapi[standard]>=0.162.2",
     "httpx>=0.28.1",
+    "ollama>=0.6.3",
     "pydantic>=2",
     "tzdata>=2026.6",
 ]

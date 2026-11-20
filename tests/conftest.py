@@ -1,5 +1,6 @@
 import pytest, time
 from api_integrations.models import EventsHistoryRequest
+from api_integrations.alarms_analysis.models import AlarmNoteAnalysis
 
 
 @pytest.fixture
@@ -23,4 +24,15 @@ def valid_history_request():
         time_from="2026-11-17T16:19:20+00:00",
         time_to="2026-11-17T16:19:30+00:00",
         limit=10,
+    )
+
+
+@pytest.fixture
+def valid_alarm_note():
+    return AlarmNoteAnalysis(
+        category="electrical",
+        priority="high",
+        summary="Test sumamry",
+        evidence=["ev_1", "ev_2", "ev_3"],
+        requires_review=False,
     )
