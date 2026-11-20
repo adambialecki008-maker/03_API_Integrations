@@ -23,8 +23,12 @@ class DuplicateEventError(Exception):
 
 class EventsRepository:
 
-    def __init__(self, path: str | Path = "events.db"):
-        self.path = path
+    def __init__(self, path: str | Path = "database/events.db"):
+        self.path = Path(path)
+        self.path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
         self.create_table()
 
     def connect(self):

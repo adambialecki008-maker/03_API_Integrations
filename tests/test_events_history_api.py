@@ -19,6 +19,7 @@ def test_get_events_returns_http_401_if_no_api_key():
 def test_get_events_returns_http_401_if_invalid_api_key():
     headers = {"X-API-Key": "invalid_key"}
     response = client.get("/events", headers=headers)
+
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid events_api_key"}
 
