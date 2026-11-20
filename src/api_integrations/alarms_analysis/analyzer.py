@@ -1,6 +1,8 @@
 import ollama
 from api_integrations.alarms_analysis.models import AlarmNoteAnalysis
 
+ollama_client = ollama.Client(timeout=120.0)
+
 
 def analyze_alarm_note(note: str) -> AlarmNoteAnalysis:
     alarm_note_json = AlarmNoteAnalysis.model_json_schema()
@@ -25,9 +27,12 @@ def analyze_alarm_note(note: str) -> AlarmNoteAnalysis:
 
     user_msg = {"role": "user", "content": f"NOTE: {note}"}
     messages = [system_msg, user_msg]
-    ollama_model = "qwen3:4b-instruct "  # "gemma3:4b"  # "qwen2.5:3b"
-    response = ollama.chat(
-        model=ollama_model, messages=messages, format=alarm_note_json, stream=False
+    ollama_model = "qwen3:4b-instruct"  # "gemma3:4b"  # "qwen2.5:3b"
+    response = ollama_client.chat(
+        model=ollama_model.strip(),
+        messages=messages,
+        format=alarm_note_json,
+        stream=False,
     )
     answer = response["message"]["content"]
     result = AlarmNoteAnalysis.model_validate_json(answer)

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal
 
 
@@ -8,6 +8,7 @@ class AlarmNoteAnalysis(BaseModel):
     summary: str = Field(min_length=1, max_length=200, pattern=r"\S")
     evidence: list[str] = Field(max_length=3)
     requires_review: bool = Field(strict=True)
+    model_config = ConfigDict(extra="forbid")
 
 
 class AlarmNoteRequest(BaseModel):

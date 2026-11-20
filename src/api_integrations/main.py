@@ -6,6 +6,7 @@ from fastapi import FastAPI
 app = FastAPI()
 import api_integrations.webhooks.api
 import api_integrations.events_history.api
+import api_integrations.alarms_analysis.api
 
 if __name__ == "__main__":
     notes = [

@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from api_integrations.main import app
 from api_integrations.alarms_analysis.api import post_analyzed_note, secret
-import pytest, json
+import pytest, json, httpx, ollama
 from api_integrations.alarms_analysis.models import AlarmNoteRequest, AlarmNoteAnalysis
 from pydantic import ValidationError
 from unittest.mock import patch
@@ -111,3 +111,33 @@ def test_post_analyzed_note_succes(valid_alarm_note):
         response = client.post("/analyze_note", headers=headers, content=content)
     assert response.status_code == 200
     assert response.json() == expected
+
+
+@pytest.mark.parametrize(
+    "error, expected_status, expected_detail",
+    [
+        (ConnectionError("Connection refused"), 503, "Ollama service unavailable"),
+        (httpx.ReadTimeout("Read timed out"), 504, "Ollama request timed out"),
+        (ollama.ResponseError("Model not found", 404), 502, "Ollama response error:"),
+    ],
+)
+def test_post_analyzed_note_handles_ollama_errors(
+    error,
+    expected_status,
+    expected_detail,
+):
+    note = "PLC_01 - Conveyor stopped after motor overload."
+    headers = {"X-API-Key": secret}
+    with patch(
+        "api_integrations.alarms_analysis.api.analyze_alarm_note",
+        side_effect=error,
+    ) as mock_analyzer:
+
+        response = client.post(
+            "/analyze_note",
+            headers=headers,
+            json={"note": note},
+        )
+    assert response.status_code == expected_status
+    assert expected_detail in response.json()["detail"]
+    mock_analyzer.assert_called_once_with(note)
