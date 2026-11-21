@@ -1,25 +1,8 @@
-from pydantic import (
-    BaseModel,
-    Field,
-    field_validator,
-    BeforeValidator,
-    model_validator,
-)
-from typing import Literal, Annotated
+from api_integrations.webhooks.models import AlarmData
 from datetime import datetime
 from zoneinfo import ZoneInfo
-
-
-class AlarmData(BaseModel):
-    machine: str
-    alarm_code: int = Field(strict=True)
-
-    @field_validator("machine")
-    @classmethod
-    def validate_machine(cls, value: str) -> str:
-        if not isinstance(value, str) or not value.strip():
-            raise ValueError("Invalid machine")
-        return value.strip()
+from typing import Annotated, Literal
+from pydantic import BeforeValidator, BaseModel, Field, model_validator
 
 
 def parse_utc_iso(value: str | None) -> str | None:
@@ -34,13 +17,6 @@ def parse_utc_iso(value: str | None) -> str | None:
 
 
 TimestampUTC = Annotated[str, BeforeValidator(parse_utc_iso)]
-
-
-class WebhookPayload(BaseModel):
-    event_id: str = Field(min_length=1, pattern=r"\S")
-    event: Literal["alarm.created"]
-    timestamp: int = Field(strict=True)
-    data: AlarmData
 
 
 class RegisteredEvent(BaseModel):

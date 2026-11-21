@@ -4,12 +4,12 @@ from api_integrations.events_repository import (
     DuplicateEventError,
 )
 import pytest
-from api_integrations.models import (
-    WebhookPayload,
+from api_integrations.events_history.models import (
     RegisteredEvent,
 )
 from unittest.mock import patch
 from datetime import datetime
+from api_integrations.webhooks.models import WebhookPayload
 
 
 @pytest.fixture

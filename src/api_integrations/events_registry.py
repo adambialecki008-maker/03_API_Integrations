@@ -1,5 +1,5 @@
 from api_integrations.events_repository import EventsRepository, DuplicateEventError
-from api_integrations.models import WebhookPayload
+from api_integrations.webhooks.models import WebhookPayload
 
 
 class EventRegistry:

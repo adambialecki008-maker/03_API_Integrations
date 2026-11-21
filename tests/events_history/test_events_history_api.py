@@ -1,10 +1,10 @@
 from fastapi.testclient import TestClient
 from api_integrations.events_history.api import app, secret
 from unittest.mock import patch
-from api_integrations.models import (
-    AlarmData,
+from api_integrations.events_history.models import (
     RegisteredEvent,
     EventsHistoryRequest,
+    AlarmData,
 )
 
 client = TestClient(app)

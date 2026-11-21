@@ -1,5 +1,5 @@
 from api_integrations.events_history.handler import process_request
-from api_integrations.models import (
+from api_integrations.events_history.models import (
     RegisteredEvent,
     EventsHistoryRequest,
     AlarmData,

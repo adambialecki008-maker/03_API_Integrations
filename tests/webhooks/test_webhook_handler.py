@@ -1,5 +1,5 @@
 from api_integrations.webhooks.handler import process_webhook
-from api_integrations.models import WebhookPayload
+from api_integrations.webhooks.models import WebhookPayload
 
 
 def test_process_webhook_succedes(valid_payload):

@@ -1,4 +1,4 @@
-from api_integrations.models import EventsHistoryRequest, RegisteredEvent
+from api_integrations.events_history.models import EventsHistoryRequest
 from api_integrations.events_repository import EventsRepository
 from datetime import datetime
 

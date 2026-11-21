@@ -1,12 +1,11 @@
 import sqlite3, time
 from pathlib import Path
-from api_integrations.models import (
+from api_integrations.events_history.models import (
     RegisteredEvent,
-    AlarmData,
-    WebhookPayload,
 )
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from api_integrations.webhooks.models import WebhookPayload, AlarmData
 
 
 def format_timestamp(timestamp: int | datetime | str) -> str:
